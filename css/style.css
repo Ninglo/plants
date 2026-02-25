@@ -227,17 +227,17 @@ body::before {
   font-family: inherit;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #7ec878, #5cb856);
+  background: linear-gradient(135deg, #8cc848, #70b434);
   color: #fff;
 }
 .btn-primary:active { opacity: 0.85; }
 .btn-blue {
-  background: linear-gradient(135deg, #6cc0e0, #50a8cc);
+  background: linear-gradient(135deg, #94acd0, #7894b8);
   color: #fff;
 }
 .btn-blue:active { opacity: 0.85; }
 .btn-orange {
-  background: linear-gradient(135deg, #f0d264, #e4c240);
+  background: linear-gradient(135deg, #e0b868, #cca448);
   color: #fff;
 }
 .btn-orange:active { opacity: 0.85; }
@@ -469,7 +469,7 @@ body::before {
 }
 .badge-plant { background: var(--green-light); color: var(--green-dark); }
 .badge-knowledge { background: var(--blue-light); color: #5a8a9e; }
-.badge-ecology { background: #fef8d8; color: #b09820; }
+.badge-ecology { background: #faf0d4; color: #b89830; }
 .badge-pending { background: var(--yellow-light); color: #a08030; }
 .card-title {
   font-size: 16px;
@@ -519,19 +519,19 @@ body::before {
   margin-bottom: 20px;
 }
 .stat-card {
-  background: rgba(232,245,225,0.6);
+  background: rgba(220,244,200,0.55);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   border-radius: var(--radius-sm);
   padding: 16px 12px;
   text-align: center;
   box-shadow: var(--shadow);
-  border: 1px solid rgba(140,192,132,0.2);
+  border: 1px solid rgba(140,200,72,0.18);
 }
 .stat-number {
   font-size: 30px;
   font-weight: 700;
-  color: var(--green);
+  color: #70b434;
 }
 .stat-label {
   font-size: 12px;
@@ -539,15 +539,15 @@ body::before {
   margin-top: 2px;
 }
 .stat-card.blue {
-  background: rgba(220,238,248,0.55);
-  border-color: rgba(124,184,212,0.2);
+  background: rgba(216,224,244,0.5);
+  border-color: rgba(148,172,208,0.2);
 }
-.stat-card.blue .stat-number { color: #5da0c0; }
+.stat-card.blue .stat-number { color: #7894b8; }
 .stat-card.orange {
-  background: rgba(255,250,210,0.6);
-  border-color: rgba(228,194,64,0.25);
+  background: rgba(248,238,210,0.55);
+  border-color: rgba(224,184,104,0.2);
 }
-.stat-card.orange .stat-number { color: #d4b020; }
+.stat-card.orange .stat-number { color: #cca448; }
 
 /* ========== 首页大图卡片 ========== */
 .recent-photo-card {
