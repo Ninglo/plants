@@ -139,11 +139,11 @@ body::before {
   width: var(--fab-size);
   height: var(--fab-size);
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--pink), #a87470);
+  background: linear-gradient(135deg, #e0b070, #d09850);
   color: var(--white);
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(196,145,138,0.35);
+  box-shadow: 0 4px 16px rgba(208,152,80,0.35);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -227,17 +227,17 @@ body::before {
   font-family: inherit;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #8bba6a, #6ea84e);
+  background: linear-gradient(135deg, #8cc084, #6aad5e);
   color: var(--white);
 }
 .btn-primary:active { opacity: 0.85; }
 .btn-blue {
-  background: linear-gradient(135deg, #9cc4d4, #72a5ba);
+  background: linear-gradient(135deg, #7cb8d4, #5da0c0);
   color: var(--white);
 }
 .btn-blue:active { opacity: 0.85; }
 .btn-orange {
-  background: linear-gradient(135deg, #d4b08a, #c49870);
+  background: linear-gradient(135deg, #e0b070, #d09850);
   color: var(--white);
 }
 .btn-orange:active { opacity: 0.85; }
@@ -491,6 +491,17 @@ body::before {
 }
 
 /* ========== 首页 ========== */
+.home-quote {
+  font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--gray-500);
+  text-align: center;
+  padding: 6px 20px 18px;
+  letter-spacing: 0.3px;
+}
 .section-title {
   font-size: 16px;
   font-weight: 600;
@@ -511,14 +522,14 @@ body::before {
   margin-bottom: 20px;
 }
 .stat-card {
-  background: rgba(240,246,232,0.6);
+  background: rgba(232,245,225,0.6);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   border-radius: var(--radius-sm);
   padding: 16px 12px;
   text-align: center;
   box-shadow: var(--shadow);
-  border: 1px solid rgba(123,168,98,0.15);
+  border: 1px solid rgba(140,192,132,0.2);
 }
 .stat-number {
   font-size: 30px;
@@ -531,15 +542,15 @@ body::before {
   margin-top: 2px;
 }
 .stat-card.blue {
-  background: rgba(222,237,245,0.55);
-  border-color: rgba(139,180,199,0.2);
+  background: rgba(220,238,248,0.55);
+  border-color: rgba(124,184,212,0.2);
 }
-.stat-card.blue .stat-number { color: var(--blue); }
+.stat-card.blue .stat-number { color: #5da0c0; }
 .stat-card.orange {
-  background: rgba(248,237,218,0.55);
-  border-color: rgba(224,184,92,0.2);
+  background: rgba(254,240,216,0.55);
+  border-color: rgba(224,176,112,0.2);
 }
-.stat-card.orange .stat-number { color: var(--orange); }
+.stat-card.orange .stat-number { color: #d09850; }
 
 /* ========== 首页大图卡片 ========== */
 .recent-photo-card {

@@ -1028,7 +1028,7 @@ var Form = (function() {
     ctx.fillStyle = '#c0bab0';
     ctx.font = '12px "Smiley Sans", "PingFang SC", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('🌱 植物笔记', W / 2, H - 32);
+    ctx.fillText('🌱 野径手记', W / 2, H - 32);
 
     // 显示预览
     var preview = document.getElementById('share-card-preview');

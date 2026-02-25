@@ -72,6 +72,9 @@ var App = (function() {
     var html = '';
 
     // 统计卡片
+    // 引文
+    html += '<div class="home-quote">Beneath every leaf, every shadow, and every silent root lies a question yearning to be asked, waiting like a spark in the dark.</div>';
+
     html += '<div class="home-stats">';
     html += '<div class="stat-card"><div class="stat-number">' + stats.totalPlants + '</div><div class="stat-label">种植物</div></div>';
     html += '<div class="stat-card blue"><div class="stat-number">' + stats.totalKnowledge + '</div><div class="stat-label">条知识</div></div>';
@@ -116,7 +119,7 @@ var App = (function() {
     } else {
       html += '<div class="empty-state">';
       html += '<div class="empty-state-icon">🌱</div>';
-      html += '<div class="empty-state-text">欢迎来到植物笔记！<br>点击上方按钮或右下角的相机开始记录</div>';
+      html += '<div class="empty-state-text">欢迎来到野径手记！<br>点击上方按钮或右下角的相机开始记录</div>';
       html += '</div>';
     }
 
