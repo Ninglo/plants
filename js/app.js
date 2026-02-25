@@ -99,29 +99,19 @@ var App = (function() {
         var badgeClass = r.type === 'plant' ? 'badge-plant' : r.type === 'knowledge' ? 'badge-knowledge' : 'badge-ecology';
         var typeLabel = r.type === 'plant' ? '🌿' : r.type === 'knowledge' ? '📖' : '🔍';
         var name = r.name || r.title || '未命名';
-        var hasPhoto = r.photoIds && r.photoIds[0];
 
-        if (hasPhoto) {
-          // 带照片的大卡片
-          html += '<div class="recent-photo-card" onclick="App.showDetail(\'' + r.id + '\')">';
-          html += '<img class="recent-photo-img" data-photo-id="' + r.photoIds[0] + '" src="' + Storage.BLANK_IMG + '">';
-          html += '<div class="recent-photo-overlay">';
-          html += '<span class="card-type-badge ' + badgeClass + '">' + typeLabel + '</span>';
-          html += '<div class="recent-photo-name">' + escapeHtml(name) + '</div>';
-          html += '<div class="recent-photo-date">' + formatDate(r.createdAt) + '</div>';
-          html += '</div>';
-          html += '</div>';
+        html += '<div class="knowledge-item" onclick="App.showDetail(\'' + r.id + '\')">';
+        if (r.photoIds && r.photoIds[0]) {
+          html += '<img style="width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0;" data-photo-id="' + r.photoIds[0] + '" src="' + Storage.BLANK_IMG + '">';
         } else {
-          // 无照片的列表项
-          html += '<div class="knowledge-item" onclick="App.showDetail(\'' + r.id + '\')">';
           html += '<div class="knowledge-icon ' + (r.type === 'knowledge' ? 'blue' : r.type === 'ecology' ? 'orange' : '') + '" style="background:var(--green-light);">' + typeLabel + '</div>';
-          html += '<div style="flex:1; min-width:0;">';
-          html += '<div style="font-size:14px; font-weight:500;">' + escapeHtml(name) + '</div>';
-          html += '<div style="font-size:12px; color:var(--gray-500);">' + formatDate(r.createdAt) + '</div>';
-          html += '</div>';
-          html += '<span class="card-type-badge ' + badgeClass + '" style="flex-shrink:0;">' + typeLabel + '</span>';
-          html += '</div>';
         }
+        html += '<div style="flex:1; min-width:0;">';
+        html += '<div style="font-size:14px; font-weight:500;">' + escapeHtml(name) + '</div>';
+        html += '<div style="font-size:12px; color:var(--gray-500);">' + formatDate(r.createdAt) + '</div>';
+        html += '</div>';
+        html += '<span class="card-type-badge ' + badgeClass + '" style="flex-shrink:0;">' + typeLabel + '</span>';
+        html += '</div>';
       });
     } else {
       html += '<div class="empty-state">';
