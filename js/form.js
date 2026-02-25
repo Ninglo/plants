@@ -1178,7 +1178,7 @@ var Form = (function() {
     ctx.font = '14px "Smiley Sans", "PingFang SC", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(badgeText, W / 2, yPos + 22);
-    yPos += 48;
+    yPos += 58;
 
     // 主标题（名称）
     var name = record.name || record.title || '未命名';
