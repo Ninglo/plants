@@ -864,10 +864,31 @@ var Form = (function() {
   }
 
   function drawShareCard(record) {
+    // 如果有照片，先加载照片再绘制
+    var firstPhotoId = (record.photoIds && record.photoIds.length > 0) ? record.photoIds[0] : null;
+    if (firstPhotoId) {
+      PhotoDB.get(firstPhotoId).then(function(photoData) {
+        if (photoData) {
+          var img = new Image();
+          img.onload = function() { renderCard(record, img); };
+          img.onerror = function() { renderCard(record, null); };
+          img.src = photoData;
+        } else {
+          renderCard(record, null);
+        }
+      }).catch(function() { renderCard(record, null); });
+    } else {
+      renderCard(record, null);
+    }
+  }
+
+  function renderCard(record, photoImg) {
     var canvas = document.getElementById('share-card-canvas');
     if (!canvas) return;
     var ctx = canvas.getContext('2d');
     var W = 540, H = 720;
+    var hasPhoto = !!photoImg;
+    var photoH = hasPhoto ? 260 : 0;
 
     // 背景
     ctx.fillStyle = '#fffef9';
@@ -876,39 +897,63 @@ var Form = (function() {
     // 水彩风格边框装饰
     drawWatercolorBorder(ctx, W, H);
 
-    // 类型图标和标签
+    // 类型信息
     var typeIcon = record.type === 'plant' ? '🌿' : record.type === 'knowledge' ? '📖' : '🔍';
     var typeText = record.type === 'plant' ? '植物档案' : record.type === 'knowledge' ? '植物学知识' : '野外发现';
     var typeColor = record.type === 'plant' ? '#7ba862' : record.type === 'knowledge' ? '#8bb4c7' : '#d4a373';
 
+    var yPos = 30;
+
+    // 照片区域（如果有）
+    if (hasPhoto) {
+      ctx.save();
+      var imgPad = 30;
+      var imgW = W - imgPad * 2;
+      var imgH = photoH;
+      roundRect(ctx, imgPad, yPos, imgW, imgH, 14);
+      ctx.clip();
+      // 居中裁剪
+      var scale = Math.max(imgW / photoImg.width, imgH / photoImg.height);
+      var sw = imgW / scale, sh = imgH / scale;
+      var sx = (photoImg.width - sw) / 2, sy = (photoImg.height - sh) / 2;
+      ctx.drawImage(photoImg, sx, sy, sw, sh, imgPad, yPos, imgW, imgH);
+      ctx.restore();
+      yPos += photoH + 18;
+    } else {
+      yPos += 20;
+    }
+
     // 顶部类型标签
     ctx.fillStyle = typeColor;
     ctx.globalAlpha = 0.15;
-    roundRect(ctx, W / 2 - 60, 50, 120, 32, 16);
+    roundRect(ctx, W / 2 - 60, yPos, 120, 32, 16);
     ctx.fill();
     ctx.globalAlpha = 1;
     ctx.fillStyle = typeColor;
     ctx.font = '14px "Smiley Sans", "PingFang SC", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(typeIcon + ' ' + typeText, W / 2, 72);
+    ctx.fillText(typeIcon + ' ' + typeText, W / 2, yPos + 22);
+    yPos += 48;
 
     // 主标题（名称）
     var name = record.name || record.title || '未命名';
     ctx.fillStyle = '#33312d';
-    ctx.font = 'bold 28px "Smiley Sans", "PingFang SC", sans-serif';
+    ctx.font = 'bold 26px "Smiley Sans", "PingFang SC", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(name.length > 12 ? name.substring(0, 12) + '…' : name, W / 2, 130);
+    ctx.fillText(name.length > 12 ? name.substring(0, 12) + '…' : name, W / 2, yPos);
+    yPos += 8;
 
     // 学名（如果有）
-    var yPos = 160;
     if (record.latinName) {
+      yPos += 22;
       ctx.fillStyle = '#9e9890';
       ctx.font = 'italic 15px Georgia, "Times New Roman", serif';
       ctx.fillText(record.latinName.length > 30 ? record.latinName.substring(0, 30) + '…' : record.latinName, W / 2, yPos);
-      yPos += 30;
+      yPos += 10;
     }
 
     // 分隔线
+    yPos += 14;
     ctx.strokeStyle = typeColor;
     ctx.globalAlpha = 0.3;
     ctx.lineWidth = 1;
@@ -917,7 +962,7 @@ var Form = (function() {
     ctx.lineTo(W - 80, yPos);
     ctx.stroke();
     ctx.globalAlpha = 1;
-    yPos += 30;
+    yPos += 22;
 
     // 信息字段
     ctx.textAlign = 'left';
@@ -936,17 +981,16 @@ var Form = (function() {
     }
 
     fields.forEach(function(f) {
-      if (yPos > H - 140) return;
+      if (yPos > H - 100) return;
       ctx.fillStyle = '#9e9890';
       ctx.font = '13px "Smiley Sans", "PingFang SC", sans-serif';
       ctx.fillText(f.label, 60, yPos);
       ctx.fillStyle = '#46433e';
       ctx.font = '15px "Smiley Sans", "PingFang SC", sans-serif';
       var val = f.value.length > 40 ? f.value.substring(0, 40) + '…' : f.value;
-      // 处理多行
       var lines = val.split('\n');
       lines.forEach(function(line, li) {
-        if (li > 2 || yPos > H - 140) return;
+        if (li > 2 || yPos > H - 100) return;
         var displayLine = line.length > 25 ? line.substring(0, 25) + '…' : line;
         ctx.fillText(displayLine, 60, yPos + 22 + li * 22);
       });
@@ -954,8 +998,8 @@ var Form = (function() {
     });
 
     // 标签
-    if (record.tags && record.tags.length > 0 && yPos < H - 120) {
-      yPos += 8;
+    if (record.tags && record.tags.length > 0 && yPos < H - 80) {
+      yPos += 4;
       var tagX = 60;
       ctx.font = '12px "Smiley Sans", "PingFang SC", sans-serif';
       record.tags.slice(0, 5).forEach(function(tag) {
@@ -977,22 +1021,22 @@ var Form = (function() {
       ctx.fillStyle = '#c0bab0';
       ctx.font = '13px "Smiley Sans", "PingFang SC", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(record.date, W / 2, H - 80);
+      ctx.fillText(record.date, W / 2, H - 58);
     }
 
     // 底部品牌
     ctx.fillStyle = '#c0bab0';
     ctx.font = '12px "Smiley Sans", "PingFang SC", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('🌱 植物笔记', W / 2, H - 45);
+    ctx.fillText('🌱 植物笔记', W / 2, H - 32);
 
     // 显示预览
     var preview = document.getElementById('share-card-preview');
     if (preview) {
-      var img = new Image();
-      img.src = canvas.toDataURL('image/png');
-      img.style.cssText = 'width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);';
-      preview.appendChild(img);
+      var previewImg = new Image();
+      previewImg.src = canvas.toDataURL('image/png');
+      previewImg.style.cssText = 'width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);';
+      preview.appendChild(previewImg);
     }
   }
 
