@@ -139,11 +139,11 @@ body::before {
   width: var(--fab-size);
   height: var(--fab-size);
   border-radius: 50%;
-  background: linear-gradient(135deg, #e0b070, #d09850);
+  background: linear-gradient(135deg, #e8a0a8, #d88890);
   color: var(--white);
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(208,152,80,0.35);
+  box-shadow: 0 4px 16px rgba(216,136,144,0.35);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -227,18 +227,18 @@ body::before {
   font-family: inherit;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #8cc084, #6aad5e);
-  color: var(--white);
+  background: linear-gradient(135deg, #7ec878, #5cb856);
+  color: #fff;
 }
 .btn-primary:active { opacity: 0.85; }
 .btn-blue {
-  background: linear-gradient(135deg, #7cb8d4, #5da0c0);
-  color: var(--white);
+  background: linear-gradient(135deg, #6cc0e0, #50a8cc);
+  color: #fff;
 }
 .btn-blue:active { opacity: 0.85; }
 .btn-orange {
-  background: linear-gradient(135deg, #e0b070, #d09850);
-  color: var(--white);
+  background: linear-gradient(135deg, #f0d264, #e4c240);
+  color: #fff;
 }
 .btn-orange:active { opacity: 0.85; }
 .btn-secondary {
@@ -469,7 +469,7 @@ body::before {
 }
 .badge-plant { background: var(--green-light); color: var(--green-dark); }
 .badge-knowledge { background: var(--blue-light); color: #5a8a9e; }
-.badge-ecology { background: var(--orange-light); color: #a07040; }
+.badge-ecology { background: #fef8d8; color: #b09820; }
 .badge-pending { background: var(--yellow-light); color: #a08030; }
 .card-title {
   font-size: 16px;
@@ -492,15 +492,14 @@ body::before {
 
 /* ========== 首页 ========== */
 .home-quote {
-  font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  font-family: "Playfair Display", Georgia, serif;
   font-style: italic;
-  font-weight: 300;
-  font-size: 14px;
-  line-height: 1.8;
-  color: var(--gray-500);
+  font-size: 13.5px;
+  line-height: 1.9;
+  color: var(--gray-400);
   text-align: center;
-  padding: 6px 20px 18px;
-  letter-spacing: 0.3px;
+  padding: 6px 16px 18px;
+  letter-spacing: 0.2px;
 }
 .section-title {
   font-size: 16px;
@@ -547,10 +546,10 @@ body::before {
 }
 .stat-card.blue .stat-number { color: #5da0c0; }
 .stat-card.orange {
-  background: rgba(254,240,216,0.55);
-  border-color: rgba(224,176,112,0.2);
+  background: rgba(255,250,210,0.6);
+  border-color: rgba(228,194,64,0.25);
 }
-.stat-card.orange .stat-number { color: #d09850; }
+.stat-card.orange .stat-number { color: #d4b020; }
 
 /* ========== 首页大图卡片 ========== */
 .recent-photo-card {

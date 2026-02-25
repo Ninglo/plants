@@ -73,7 +73,7 @@ var App = (function() {
 
     // 统计卡片
     // 引文
-    html += '<div class="home-quote">Beneath every leaf, every shadow, and every silent root lies a question yearning to be asked, waiting like a spark in the dark.</div>';
+    html += '<div class="home-quote">Beneath every leaf, every shadow, and every silent root<br>lies a question yearning to be asked,<br>waiting like a spark in the dark.</div>';
 
     html += '<div class="home-stats">';
     html += '<div class="stat-card"><div class="stat-number">' + stats.totalPlants + '</div><div class="stat-label">种植物</div></div>';
