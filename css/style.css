@@ -45,7 +45,8 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   font-family: "Smiley Sans", "SmileySans-Oblique", -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  background: var(--gray-50);
+  background: linear-gradient(165deg, #fdf8f0 0%, #f5f9ef 35%, #faf5f4 65%, #fdf6e8 100%);
+  background-attachment: fixed;
   color: var(--gray-900);
   line-height: 1.7;
   overflow-x: hidden;
@@ -59,12 +60,12 @@ body {
   left: 0;
   right: 0;
   height: var(--top-bar-height);
-  background: var(--white);
+  background: linear-gradient(135deg, #fffef9, #faf8f0);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 18px;
-  border-bottom: 1px solid var(--gray-200);
+  border-bottom: 1px solid rgba(221,217,208,0.5);
   z-index: 100;
 }
 .app-title {
@@ -90,11 +91,11 @@ body {
   left: 0;
   right: 0;
   height: var(--nav-height);
-  background: var(--white);
+  background: linear-gradient(135deg, #fdfaf3, #fffef9);
   display: flex;
   align-items: center;
   justify-content: space-around;
-  border-top: 1px solid var(--gray-200);
+  border-top: 1px solid rgba(221,217,208,0.5);
   z-index: 100;
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
@@ -211,17 +212,17 @@ body {
   font-family: inherit;
 }
 .btn-primary {
-  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  background: linear-gradient(135deg, #8bba6a, #6ea84e);
   color: var(--white);
 }
 .btn-primary:active { opacity: 0.85; }
 .btn-blue {
-  background: linear-gradient(135deg, var(--blue), #5a8a9e);
+  background: linear-gradient(135deg, #9cc4d4, #72a5ba);
   color: var(--white);
 }
 .btn-blue:active { opacity: 0.85; }
 .btn-orange {
-  background: linear-gradient(135deg, var(--orange), #a07040);
+  background: linear-gradient(135deg, #d4b08a, #c49870);
   color: var(--white);
 }
 .btn-orange:active { opacity: 0.85; }
@@ -495,12 +496,12 @@ body {
   margin-bottom: 20px;
 }
 .stat-card {
-  background: var(--white);
+  background: linear-gradient(135deg, #f0f6e8, #e8f4dd);
   border-radius: var(--radius-sm);
   padding: 16px 12px;
   text-align: center;
   box-shadow: var(--shadow);
-  border: 1px solid var(--gray-200);
+  border: 1px solid rgba(123,168,98,0.15);
 }
 .stat-number {
   font-size: 30px;
@@ -509,10 +510,18 @@ body {
 }
 .stat-label {
   font-size: 12px;
-  color: var(--gray-500);
+  color: var(--gray-600);
   margin-top: 2px;
 }
+.stat-card.blue {
+  background: linear-gradient(135deg, #edf5f9, #deedf5);
+  border-color: rgba(139,180,199,0.2);
+}
 .stat-card.blue .stat-number { color: var(--blue); }
+.stat-card.orange {
+  background: linear-gradient(135deg, #fdf6e3, #f8edda);
+  border-color: rgba(224,184,92,0.2);
+}
 .stat-card.orange .stat-number { color: var(--orange); }
 
 /* ========== 待处理队列 ========== */
@@ -592,11 +601,11 @@ body {
   margin-bottom: 6px;
 }
 .timeline-card {
-  background: var(--white);
+  background: linear-gradient(135deg, #fffef9, #fdf9f2);
   border-radius: var(--radius-sm);
   padding: 14px;
   box-shadow: var(--shadow);
-  border: 1px solid var(--gray-200);
+  border: 1px solid rgba(221,217,208,0.6);
 }
 .timeline-card-header {
   display: flex;
@@ -628,12 +637,12 @@ body {
   align-items: flex-start;
   gap: 12px;
   padding: 14px;
-  background: var(--white);
+  background: linear-gradient(135deg, #fffef9, #fdfaf3);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow);
   margin-bottom: 10px;
   cursor: pointer;
-  border: 1px solid var(--gray-200);
+  border: 1px solid rgba(221,217,208,0.6);
 }
 .knowledge-icon {
   width: 42px;
