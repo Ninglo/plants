@@ -92,6 +92,11 @@ var Storage = (function() {
     return getAll().filter(function(r) { return r.status !== 'pending'; });
   }
 
+  // 获取已观察但未收录的记录
+  function getObserved() {
+    return getAll().filter(function(r) { return r.status === 'observed'; });
+  }
+
   // 按标签筛选
   function getByTag(tag) {
     return getAll().filter(function(r) {
@@ -125,7 +130,8 @@ var Storage = (function() {
       totalKnowledge: records.filter(function(r) { return r.type === 'knowledge'; }).length,
       totalEcology: records.filter(function(r) { return r.type === 'ecology'; }).length,
       totalFamilies: Object.keys(families).length,
-      pendingCount: getPending().length
+      pendingCount: getPending().length,
+      observedCount: getObserved().length
     };
   }
 
@@ -325,6 +331,7 @@ var Storage = (function() {
     getByType: getByType,
     getPending: getPending,
     getCompleted: getCompleted,
+    getObserved: getObserved,
     getByTag: getByTag,
     getAllTags: getAllTags,
     getStats: getStats,

@@ -50,7 +50,13 @@ var Cards = (function() {
         html += '<div class="card-image" style="display:flex;align-items:center;justify-content:center;font-size:48px;background:var(--green-light);">🌿</div>';
       }
       html += '<div class="card-body">';
-      html += '<div class="card-title">' + escapeHtml(p.name || '未命名') + '</div>';
+      html += '<div class="card-title">' + escapeHtml(p.name || '未命名');
+      if (p.status === 'observed') {
+        html += ' <span class="badge-observed">已观察</span>';
+      } else if (p.status === 'complete') {
+        html += ' <span class="badge-collected">已收录</span>';
+      }
+      html += '</div>';
       if (p.family || p.genus) {
         html += '<div class="card-meta">' + escapeHtml([p.family, p.genus].filter(Boolean).join(' · ')) + '</div>';
       }

@@ -84,6 +84,9 @@ var App = (function() {
     // 待处理队列
     html += Inbox.renderPendingList();
 
+    // 待补充（已观察未收录）
+    html += renderObservedList();
+
     // 快速新建
     html += '<div style="display:flex; gap:8px; margin-bottom:20px;">';
     html += '<button class="btn btn-primary btn-sm" style="flex:1;" onclick="Form.openNew(\'plant\')">🌿 记录植物</button>';
@@ -126,6 +129,30 @@ var App = (function() {
     return html;
   }
 
+  function renderObservedList() {
+    var observed = Storage.getObserved();
+    if (observed.length === 0) return '';
+
+    observed.sort(function(a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); });
+
+    var html = '<div class="section-title">待补充 <span style="font-size:12px; color:var(--gray-400); font-weight:400;">' + observed.length + ' 条已观察</span></div>';
+    observed.forEach(function(item) {
+      html += '<div class="knowledge-item observed-item" onclick="Form.openEdit(\'' + item.id + '\')">';
+      if (item.photoIds && item.photoIds[0]) {
+        html += '<img style="width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0;" data-photo-id="' + item.photoIds[0] + '" src="' + Storage.BLANK_IMG + '">';
+      } else {
+        html += '<div class="knowledge-icon" style="background:var(--green-light);">🌿</div>';
+      }
+      html += '<div style="flex:1; min-width:0;">';
+      html += '<div style="font-size:14px; font-weight:500;">' + escapeHtml(item.name || '未命名') + '</div>';
+      html += '<div style="font-size:12px; color:var(--gray-400);">' + formatDate(item.updatedAt) + '</div>';
+      html += '</div>';
+      html += '<span class="badge-observed" style="flex-shrink:0;">已观察</span>';
+      html += '</div>';
+    });
+    return html;
+  }
+
   // 详情页
   function showDetail(id) {
     var record = Storage.getById(id);
@@ -146,10 +173,42 @@ var App = (function() {
     var badgeClass = record.type === 'plant' ? 'badge-plant' : record.type === 'knowledge' ? 'badge-knowledge' : 'badge-ecology';
     var typeLabel = record.type === 'plant' ? '🌿 植物档案' : record.type === 'knowledge' ? '📖 植物学知识' : '🔍 野外发现';
     html += '<span class="card-type-badge ' + badgeClass + '" style="margin-bottom:12px;">' + typeLabel + '</span>';
+    if (record.type === 'plant' && record.status === 'observed') {
+      html += ' <span class="badge-observed" style="margin-bottom:12px;">已观察</span>';
+    } else if (record.type === 'plant' && record.status === 'complete') {
+      html += ' <span class="badge-collected" style="margin-bottom:12px;">已收录</span>';
+    }
 
     // 根据类型渲染字段
     if (record.type === 'plant') {
       html += renderField('中文名', record.name);
+
+      // 观察记录区
+      var obsFields = [
+        { key: 'lifeForm', label: '生活型' },
+        { key: 'leafArrangement', label: '叶序' },
+        { key: 'leafStructure', label: '叶结构' },
+        { key: 'petalCount', label: '花瓣数量' },
+        { key: 'flowerForm', label: '花整体形态' },
+        { key: 'fruitType', label: '果实类型' },
+        { key: 'intuitionCategory', label: '直觉分类' }
+      ];
+      var hasObs = obsFields.some(function(f) { return record[f.key]; });
+      if (hasObs) {
+        html += '<div class="detail-obs-section">';
+        html += '<div class="detail-obs-title">我的观察</div>';
+        html += '<div class="detail-obs-chips">';
+        obsFields.forEach(function(f) {
+          if (record[f.key]) {
+            html += '<div class="detail-obs-item">';
+            html += '<span class="detail-obs-label">' + f.label + '</span>';
+            html += '<span class="detail-obs-value">' + escapeHtml(record[f.key]) + '</span>';
+            html += '</div>';
+          }
+        });
+        html += '</div></div>';
+      }
+
       html += renderField('学名', record.latinName);
       html += renderField('科', record.family);
       html += renderField('属', record.genus);
@@ -201,7 +260,11 @@ var App = (function() {
 
     // 操作按钮
     html += '<div class="detail-actions">';
-    html += '<button class="btn btn-primary btn-block" onclick="Form.openEdit(\'' + record.id + '\')">编辑</button>';
+    if (record.type === 'plant' && record.status === 'observed') {
+      html += '<button class="btn btn-primary btn-block" onclick="Form.openEdit(\'' + record.id + '\')">补充专业信息</button>';
+    } else {
+      html += '<button class="btn btn-primary btn-block" onclick="Form.openEdit(\'' + record.id + '\')">编辑</button>';
+    }
     html += '<button class="btn btn-danger" onclick="App.deleteFromDetail(\'' + record.id + '\')">删除</button>';
     html += '</div>';
 

@@ -6,6 +6,110 @@ var Form = (function() {
   var currentLinks = [];
   var editingId = null;
 
+  // 观察字段定义
+  var OBSERVATION_FIELDS = [
+    {
+      id: 'lifeForm', label: '生活型', desc: '这棵植物整体什么样子？',
+      options: [
+        { value: '乔木', desc: '高大的树' },
+        { value: '灌木', desc: '矮矮的丛' },
+        { value: '草本', desc: '软软的草' },
+        { value: '藤本', desc: '会攀爬' },
+        { value: '水生', desc: '长在水里' }
+      ]
+    },
+    {
+      id: 'leafArrangement', label: '叶序', desc: '叶子怎么长在茎上？',
+      options: [
+        { value: '互生', desc: '左右交替长' },
+        { value: '对生', desc: '面对面长' },
+        { value: '轮生', desc: '围一圈' },
+        { value: '不确定', desc: '' }
+      ]
+    },
+    {
+      id: 'leafStructure', label: '叶结构', desc: '一片叶子的样子？',
+      options: [
+        { value: '单叶', desc: '一片完整的叶' },
+        { value: '复叶', desc: '一根柄上好几片小叶' },
+        { value: '不确定', desc: '' }
+      ]
+    },
+    {
+      id: 'petalCount', label: '花瓣数量', desc: '数一数花瓣',
+      options: [
+        { value: '3或6', desc: '' },
+        { value: '4', desc: '' },
+        { value: '5', desc: '' },
+        { value: '很多', desc: '' },
+        { value: '无花', desc: '' },
+        { value: '不确定', desc: '' }
+      ]
+    },
+    {
+      id: 'flowerForm', label: '花整体形态', desc: '花是怎么开的？',
+      options: [
+        { value: '单朵', desc: '' },
+        { value: '一串', desc: '' },
+        { value: '一团像大花', desc: '' },
+        { value: '无花', desc: '' },
+        { value: '不确定', desc: '' }
+      ]
+    },
+    {
+      id: 'fruitType', label: '果实类型', desc: '果子摸起来什么感觉？',
+      options: [
+        { value: '多汁', desc: '' },
+        { value: '有硬核', desc: '' },
+        { value: '干燥裂开', desc: '' },
+        { value: '很轻', desc: '' },
+        { value: '无果', desc: '' },
+        { value: '不确定', desc: '' }
+      ]
+    },
+    {
+      id: 'intuitionCategory', label: '直觉分类', desc: '凭感觉猜一猜？',
+      options: [
+        { value: '蔷薇类', desc: '' },
+        { value: '豆科类', desc: '' },
+        { value: '菊科类', desc: '' },
+        { value: '禾本科', desc: '' },
+        { value: '其他', desc: '都不像' },
+        { value: '不确定', desc: '' }
+      ]
+    }
+  ];
+
+  function renderChipField(field, selectedValue) {
+    var html = '<div class="form-group">';
+    html += '<label class="form-label">' + field.label + '</label>';
+    if (field.desc) html += '<div class="form-hint">' + field.desc + '</div>';
+    html += '<div class="chip-group" data-field="' + field.id + '">';
+    field.options.forEach(function(opt) {
+      var isActive = selectedValue === opt.value;
+      html += '<button type="button" class="obs-chip' + (isActive ? ' active' : '') + '" ';
+      html += 'data-value="' + opt.value + '" onclick="Form.selectChip(this)">';
+      html += '<span class="obs-chip-label">' + opt.value + '</span>';
+      if (opt.desc) html += '<span class="obs-chip-desc">' + opt.desc + '</span>';
+      html += '</button>';
+    });
+    html += '</div></div>';
+    return html;
+  }
+
+  function selectChip(btn) {
+    var group = btn.parentElement;
+    group.querySelectorAll('.obs-chip').forEach(function(c) { c.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+
+  function getChipVal(fieldId) {
+    var group = document.querySelector('.chip-group[data-field="' + fieldId + '"]');
+    if (!group) return '';
+    var active = group.querySelector('.obs-chip.active');
+    return active ? active.getAttribute('data-value') : '';
+  }
+
   // 语音识别
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -149,12 +253,24 @@ var Form = (function() {
     html += renderLinksSelector();
 
     // 操作按钮
-    html += '<div style="margin-top:20px; display:flex; gap:10px;">';
-    html += '<button class="btn btn-primary btn-block" onclick="Form.save()">保存</button>';
-    if (editingId) {
-      html += '<button class="btn btn-danger" onclick="Form.deleteRecord()">删除</button>';
+    if (currentType === 'plant') {
+      html += '<div class="save-buttons">';
+      html += '<div class="save-row">';
+      html += '<button class="btn btn-primary btn-block" onclick="Form.save()">保存完整记录</button>';
+      if (editingId) {
+        html += '<button class="btn btn-danger" onclick="Form.deleteRecord()">删除</button>';
+      }
+      html += '</div>';
+      html += '<button class="btn-secondary" onclick="Form.saveObservation()">仅保存观察（跳过专业信息）</button>';
+      html += '</div>';
+    } else {
+      html += '<div style="margin-top:20px; display:flex; gap:10px;">';
+      html += '<button class="btn btn-primary btn-block" onclick="Form.save()">保存</button>';
+      if (editingId) {
+        html += '<button class="btn btn-danger" onclick="Form.deleteRecord()">删除</button>';
+      }
+      html += '</div>';
     }
-    html += '</div>';
 
     document.getElementById('modal-body').innerHTML = html;
 
@@ -172,9 +288,46 @@ var Form = (function() {
 
   function renderPlantForm() {
     var html = '';
+
+    // ===== Step 1: 观察记录 =====
+    html += '<div class="form-section">';
+    html += '<div class="form-section-header">';
+    html += '<span class="form-section-badge step-obs">观察</span>';
+    html += '<span class="form-section-title">我的观察</span>';
+    html += '<span class="form-section-hint">不需要专业知识，选一选就好</span>';
+    html += '</div>';
+
     html += '<div class="form-group">';
     html += '<label class="form-label">中文名 *</label>';
-    html += '<div class="input-with-voice"><input type="text" class="form-input" id="f-name" placeholder="如：银杏">' + createVoiceBtn() + '</div>';
+    html += '<div class="input-with-voice"><input type="text" class="form-input" id="f-name" placeholder="如：银杏（不确定也可以写暂定名）">' + createVoiceBtn() + '</div>';
+    html += '</div>';
+
+    // 照片
+    html += renderPhotoUpload();
+
+    // 7 个观察 chip 字段
+    OBSERVATION_FIELDS.forEach(function(field) {
+      html += renderChipField(field, '');
+    });
+
+    html += '<div class="form-row">';
+    html += '<div class="form-group"><label class="form-label">发现日期</label><input type="date" class="form-input" id="f-date" value="' + new Date().toISOString().split('T')[0] + '"></div>';
+    html += '<div class="form-group"><label class="form-label">发现地点</label><div class="input-with-voice"><input type="text" class="form-input" id="f-location" placeholder="选填">' + createVoiceBtn() + '</div></div>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label class="form-label">是什么吸引了我</label>';
+    html += '<div class="input-with-voice"><textarea class="form-textarea" id="f-attraction" placeholder="记录你最初注意到它的原因...">' + '</textarea>' + createVoiceBtn() + '</div>';
+    html += '</div>';
+
+    html += '</div>'; // end step 1
+
+    // ===== Step 2: 专业信息 =====
+    html += '<div class="form-section">';
+    html += '<div class="form-section-header">';
+    html += '<span class="form-section-badge step-pro">收录</span>';
+    html += '<span class="form-section-title">专业信息</span>';
+    html += '<span class="form-section-hint">查阅资料后再补充，不着急</span>';
     html += '</div>';
 
     html += '<div class="form-group">';
@@ -192,19 +345,6 @@ var Form = (function() {
     html += '<div class="input-with-voice"><textarea class="form-textarea" id="f-features" rows="3" placeholder="如：叶扇形，秋季变黄">' + '</textarea>' + createVoiceBtn() + '</div>';
     html += '</div>';
 
-    // 照片
-    html += renderPhotoUpload();
-
-    html += '<div class="form-row">';
-    html += '<div class="form-group"><label class="form-label">发现日期</label><input type="date" class="form-input" id="f-date" value="' + new Date().toISOString().split('T')[0] + '"></div>';
-    html += '<div class="form-group"><label class="form-label">发现地点</label><div class="input-with-voice"><input type="text" class="form-input" id="f-location" placeholder="选填">' + createVoiceBtn() + '</div></div>';
-    html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label class="form-label">是什么吸引了我</label>';
-    html += '<div class="input-with-voice"><textarea class="form-textarea" id="f-attraction" placeholder="记录你最初注意到它的原因...">' + '</textarea>' + createVoiceBtn() + '</div>';
-    html += '</div>';
-
     html += '<div class="form-group">';
     html += '<label class="form-label">学习笔记</label>';
     html += '<div class="input-with-voice"><textarea class="form-textarea" id="f-notes" placeholder="深入了解后记录在这里...">' + '</textarea>' + createVoiceBtn() + '</div>';
@@ -214,6 +354,8 @@ var Form = (function() {
     html += '<label class="form-label">我的思考</label>';
     html += '<div class="input-with-voice"><textarea class="form-textarea" id="f-thoughts" placeholder="你的感悟和联想...">' + '</textarea>' + createVoiceBtn() + '</div>';
     html += '</div>';
+
+    html += '</div>'; // end step 2
 
     return html;
   }
@@ -370,6 +512,17 @@ var Form = (function() {
       setVal('f-attraction', record.attraction);
       setVal('f-notes', record.notes);
       setVal('f-thoughts', record.thoughts);
+      // 恢复观察 chip 选中状态
+      OBSERVATION_FIELDS.forEach(function(field) {
+        if (record[field.id]) {
+          var group = document.querySelector('.chip-group[data-field="' + field.id + '"]');
+          if (group) {
+            group.querySelectorAll('.obs-chip').forEach(function(chip) {
+              chip.classList.toggle('active', chip.getAttribute('data-value') === record[field.id]);
+            });
+          }
+        }
+      });
     } else if (currentType === 'knowledge') {
       setVal('f-title', record.title);
       setVal('f-category', record.category);
@@ -416,6 +569,10 @@ var Form = (function() {
       record.attraction = getVal('f-attraction');
       record.notes = getVal('f-notes');
       record.thoughts = getVal('f-thoughts');
+      // 观察字段
+      OBSERVATION_FIELDS.forEach(function(field) {
+        record[field.id] = getChipVal(field.id);
+      });
     } else if (currentType === 'knowledge') {
       record.title = getVal('f-title');
       if (!record.title) { alert('请输入主题名称'); return; }
@@ -467,6 +624,80 @@ var Form = (function() {
         });
       }
 
+      App.refreshView();
+      showCelebration(record);
+    });
+  }
+
+  // 仅保存观察（不需要专业信息）
+  function saveObservation() {
+    var name = getVal('f-name');
+    if (!name) { alert('请输入植物名称'); return; }
+
+    var status = 'observed';
+    // 如果已是 complete，不降级
+    if (editingId) {
+      var existing = Storage.getById(editingId);
+      if (existing && existing.status === 'complete') status = 'complete';
+    }
+
+    var record = {
+      type: 'plant',
+      status: status,
+      tags: currentTags,
+      links: currentLinks,
+      date: getVal('f-date'),
+      name: name,
+      location: getVal('f-location'),
+      attraction: getVal('f-attraction'),
+      // 也保存用户可能已填的专业字段
+      latinName: getVal('f-latinName'),
+      family: getVal('f-family'),
+      genus: getVal('f-genus'),
+      features: getVal('f-features'),
+      notes: getVal('f-notes'),
+      thoughts: getVal('f-thoughts')
+    };
+
+    // 收集观察 chip 选择
+    OBSERVATION_FIELDS.forEach(function(field) {
+      record[field.id] = getChipVal(field.id);
+    });
+
+    // 照片处理（与 save 相同）
+    var savePromises = [];
+    var allPhotoIds = [];
+    currentPhotos.forEach(function(photo) {
+      if (photo.id) {
+        allPhotoIds.push(photo.id);
+      } else {
+        var newId = 'photo_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+        allPhotoIds.push(newId);
+        savePromises.push(PhotoDB.save(newId, photo.data));
+      }
+    });
+    record.photoIds = allPhotoIds;
+
+    Promise.all(savePromises).then(function() {
+      if (editingId) {
+        Storage.update(editingId, record);
+        currentLinks.forEach(function(linkId) {
+          var linked = Storage.getById(linkId);
+          if (linked && (!linked.links || linked.links.indexOf(editingId) === -1)) {
+            var newLinks = (linked.links || []).concat(editingId);
+            Storage.update(linkId, { links: newLinks });
+          }
+        });
+      } else {
+        var created = Storage.create(record);
+        currentLinks.forEach(function(linkId) {
+          var linked = Storage.getById(linkId);
+          if (linked && (!linked.links || linked.links.indexOf(created.id) === -1)) {
+            var newLinks = (linked.links || []).concat(created.id);
+            Storage.update(linkId, { links: newLinks });
+          }
+        });
+      }
       App.refreshView();
       showCelebration(record);
     });
@@ -1106,6 +1337,8 @@ var Form = (function() {
     openEdit: openEdit,
     openFromPending: openFromPending,
     save: save,
+    saveObservation: saveObservation,
+    selectChip: selectChip,
     deleteRecord: deleteRecord,
     addPhotos: addPhotos,
     removePhoto: removePhoto,
