@@ -1,7 +1,7 @@
 /* ========== 字体加载 ========== */
 @font-face {
   font-family: "Smiley Sans";
-  src: url("https://cdn.jsdelivr.net/npm/smiley-sans@1.1.1/dist/SmileySans-Oblique.ttf.woff2") format("woff2");
+  src: url("../fonts/SmileySans-Oblique.ttf.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
