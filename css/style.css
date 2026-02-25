@@ -139,11 +139,11 @@ body::before {
   width: var(--fab-size);
   height: var(--fab-size);
   border-radius: 50%;
-  background: linear-gradient(135deg, #e8a0a8, #d88890);
-  color: var(--white);
+  background: linear-gradient(135deg, #f48c98, #e87080);
+  color: #fff;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(216,136,144,0.35);
+  box-shadow: 0 4px 16px rgba(244,140,152,0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -237,7 +237,7 @@ body::before {
 }
 .btn-blue:active { opacity: 0.85; }
 .btn-orange {
-  background: linear-gradient(135deg, #e0b868, #cca448);
+  background: linear-gradient(135deg, #f0c844, #e4b828);
   color: #fff;
 }
 .btn-orange:active { opacity: 0.85; }
@@ -544,10 +544,10 @@ body::before {
 }
 .stat-card.blue .stat-number { color: #7894b8; }
 .stat-card.orange {
-  background: rgba(248,238,210,0.55);
-  border-color: rgba(224,184,104,0.2);
+  background: rgba(252,244,200,0.6);
+  border-color: rgba(240,200,68,0.22);
 }
-.stat-card.orange .stat-number { color: #cca448; }
+.stat-card.orange .stat-number { color: #d4a820; }
 
 /* ========== 首页大图卡片 ========== */
 .recent-photo-card {
