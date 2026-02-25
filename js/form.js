@@ -142,7 +142,10 @@ var Form = (function() {
     // 标签
     html += renderTagsInput();
 
-    // 关联记录
+    // 智能推荐关联
+    html += '<div id="recommend-section"></div>';
+
+    // 手动关联记录
     html += renderLinksSelector();
 
     // 操作按钮
@@ -154,6 +157,17 @@ var Form = (function() {
     html += '</div>';
 
     document.getElementById('modal-body').innerHTML = html;
+
+    // 绑定推荐触发事件（防抖，字段失焦时刷新推荐）
+    setTimeout(function() {
+      var watchFields = ['f-name', 'f-family', 'f-genus', 'f-category', 'f-relatedObjects'];
+      watchFields.forEach(function(fieldId) {
+        var el = document.getElementById(fieldId);
+        if (el) el.addEventListener('blur', scheduleRecommendUpdate);
+      });
+      // 初始渲染推荐（编辑模式下已有数据）
+      updateRecommendations();
+    }, 100);
   }
 
   function renderPlantForm() {
@@ -334,7 +348,7 @@ var Form = (function() {
       var name = r.name || r.title || '未命名';
       var badgeClass = r.type === 'plant' ? 'badge-plant' : r.type === 'knowledge' ? 'badge-knowledge' : 'badge-ecology';
       var typeLabel = r.type === 'plant' ? '🌿' : r.type === 'knowledge' ? '📖' : '🔗';
-      html += '<div class="link-option ' + (isSelected ? 'selected' : '') + '" onclick="Form.toggleLink(\'' + r.id + '\', this)">';
+      html += '<div class="link-option ' + (isSelected ? 'selected' : '') + '" data-link-id="' + r.id + '" onclick="Form.toggleLink(\'' + r.id + '\', this)">';
       html += '<span class="link-check">' + (isSelected ? '✓' : '') + '</span>';
       html += '<span class="card-type-badge ' + badgeClass + '">' + typeLabel + '</span>';
       html += '<span>' + name + '</span>';
@@ -494,6 +508,7 @@ var Form = (function() {
       if (tag && currentTags.indexOf(tag) === -1) {
         currentTags.push(tag);
         updateTagsContainer();
+        scheduleRecommendUpdate();
       }
     }
   }
@@ -501,6 +516,7 @@ var Form = (function() {
   function removeTag(index) {
     currentTags.splice(index, 1);
     updateTagsContainer();
+    scheduleRecommendUpdate();
   }
 
   // 链接操作
@@ -710,6 +726,99 @@ var Form = (function() {
     return str;
   }
 
+  // ========== 智能推荐 ==========
+
+  var recommendTimer = null;
+
+  function scheduleRecommendUpdate() {
+    clearTimeout(recommendTimer);
+    recommendTimer = setTimeout(updateRecommendations, 300);
+  }
+
+  function gatherCurrentFormData() {
+    var data = { type: currentType, tags: currentTags };
+    if (currentType === 'plant') {
+      data.name = getVal('f-name');
+      data.family = getVal('f-family');
+      data.genus = getVal('f-genus');
+    } else if (currentType === 'knowledge') {
+      data.title = getVal('f-title');
+      data.category = getVal('f-category');
+    } else {
+      data.title = getVal('f-title');
+      data.relatedObjects = getVal('f-relatedObjects');
+    }
+    return data;
+  }
+
+  function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function updateRecommendations() {
+    var section = document.getElementById('recommend-section');
+    if (!section) return;
+
+    var currentData = gatherCurrentFormData();
+    var recs = Recommend.getRecommendations(currentData, editingId);
+
+    if (recs.length === 0) {
+      section.innerHTML = '';
+      return;
+    }
+
+    var html = '<label class="form-label">💡 推荐关联</label>';
+    html += '<div class="recommend-list">';
+
+    recs.forEach(function(item) {
+      var r = item.record;
+      var name = r.name || r.title || '未命名';
+      var isLinked = currentLinks.indexOf(r.id) !== -1;
+      var typeIcon = r.type === 'plant' ? '🌿' : r.type === 'knowledge' ? '📖' : '🔗';
+      var badgeClass = r.type === 'plant' ? 'badge-plant' : r.type === 'knowledge' ? 'badge-knowledge' : 'badge-ecology';
+
+      html += '<div class="recommend-item' + (isLinked ? ' linked' : '') + '" onclick="Form.toggleRecommendLink(\'' + r.id + '\', this)">';
+      html += '<div class="recommend-item-header">';
+      html += '<span class="recommend-check">' + (isLinked ? '✓' : '+') + '</span>';
+      html += '<span class="card-type-badge ' + badgeClass + '">' + typeIcon + '</span>';
+      html += '<span class="recommend-name">' + escapeHtml(name) + '</span>';
+      html += '</div>';
+      html += '<div class="recommend-reasons">';
+      item.reasons.forEach(function(reason) {
+        html += '<span class="recommend-reason-chip">' + escapeHtml(reason) + '</span>';
+      });
+      html += '</div>';
+      html += '</div>';
+    });
+
+    html += '</div>';
+    section.innerHTML = html;
+  }
+
+  function toggleRecommendLink(id, el) {
+    var index = currentLinks.indexOf(id);
+    if (index === -1) {
+      currentLinks.push(id);
+      el.classList.add('linked');
+      el.querySelector('.recommend-check').textContent = '✓';
+    } else {
+      currentLinks.splice(index, 1);
+      el.classList.remove('linked');
+      el.querySelector('.recommend-check').textContent = '+';
+    }
+    // 同步更新下方手动关联选择器
+    var linkOptions = document.querySelectorAll('.link-option');
+    linkOptions.forEach(function(opt) {
+      if (opt.getAttribute('data-link-id') === id) {
+        var isSelected = currentLinks.indexOf(id) !== -1;
+        opt.classList.toggle('selected', isSelected);
+        opt.querySelector('.link-check').textContent = isSelected ? '✓' : '';
+      }
+    });
+  }
+
   return {
     openNew: openNew,
     openEdit: openEdit,
@@ -721,6 +830,7 @@ var Form = (function() {
     handleTagKey: handleTagKey,
     removeTag: removeTag,
     toggleLink: toggleLink,
+    toggleRecommendLink: toggleRecommendLink,
     handleVoice: handleVoice,
     setType: setType,
     togglePasteArea: togglePasteArea,

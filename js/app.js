@@ -60,6 +60,7 @@ var App = (function() {
         break;
       case 'graph':
         content.innerHTML = Graph.render();
+        setTimeout(function() { Graph.initVisual(); }, 50);
         break;
     }
     // 异步加载照片

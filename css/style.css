@@ -939,6 +939,145 @@ body {
   border-color: var(--gray-400);
 }
 
+/* ========== 智能推荐关联 ========== */
+.recommend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+.recommend-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--gray-200);
+  background: var(--white);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.recommend-item:active { background: var(--green-light); }
+.recommend-item.linked {
+  border-color: var(--green);
+  background: var(--green-light);
+}
+.recommend-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.recommend-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--gray-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+  color: var(--gray-400);
+  transition: all 0.2s;
+}
+.recommend-item.linked .recommend-check {
+  border-color: var(--green);
+  background: var(--green);
+  color: var(--white);
+}
+.recommend-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+.recommend-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-left: 30px;
+}
+.recommend-reason-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  background: #fff8e1;
+  color: #f9a825;
+  font-weight: 500;
+}
+
+/* ========== 可视化图谱 ========== */
+.graph-view-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.graph-canvas-wrap {
+  width: 100%;
+  min-height: 350px;
+  background: var(--white);
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+  overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: grab;
+}
+.graph-svg {
+  display: block;
+}
+.graph-edge {
+  stroke: var(--gray-300);
+  stroke-width: 1.5;
+}
+.graph-edge.implicit {
+  stroke-dasharray: 4 4;
+  stroke: var(--gray-200);
+  stroke-width: 1;
+}
+.graph-node {
+  cursor: pointer;
+}
+.graph-node:hover circle,
+.graph-node:active circle {
+  stroke-width: 3;
+}
+.graph-node-label {
+  fill: var(--gray-700);
+  font-family: inherit;
+  pointer-events: none;
+}
+.graph-legend {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+.graph-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.graph-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.graph-legend-line {
+  width: 20px;
+  height: 0;
+  border-top: 2px solid var(--gray-400);
+  flex-shrink: 0;
+}
+.graph-legend-line.dashed {
+  border-top-style: dashed;
+  border-color: var(--gray-300);
+}
+
 /* ========== 异步加载照片占位 ========== */
 img[data-photo-id] {
   background: var(--gray-100);
