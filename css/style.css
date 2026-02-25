@@ -87,6 +87,15 @@ body::before {
   color: var(--gray-800);
   letter-spacing: 1px;
 }
+@media (min-width: 768px) {
+  .top-bar {
+    justify-content: center;
+  }
+  .top-bar #btn-sync {
+    position: absolute;
+    right: 18px;
+  }
+}
 
 /* ========== 主内容 ========== */
 .main-content {
@@ -493,11 +502,11 @@ body::before {
 /* ========== 首页 ========== */
 .home-quote {
   font-family: Zapfino, "Great Vibes", cursive;
-  font-size: 14px;
-  line-height: 2.2;
+  font-size: 11px;
+  line-height: 1.8;
   color: var(--gray-400);
   text-align: center;
-  padding: 8px 16px 20px;
+  padding: 4px 16px 10px;
 }
 .section-title {
   font-size: 16px;
