@@ -1055,12 +1055,20 @@ var Form = (function() {
   function showCelebration(record) {
     var name = record.name || record.title || '未命名';
     var typeIcon = record.type === 'plant' ? '🌿' : record.type === 'knowledge' ? '📖' : '🔍';
-    var typeText = record.type === 'plant' ? '植物档案' : record.type === 'knowledge' ? '植物学知识' : '野外发现';
+    var isObserved = record.status === 'observed';
+
+    // 根据状态区分标题和提示
+    var celebTitle = isObserved ? '观察完成！' : '收录完成！';
+    var modalTitle = isObserved ? '👀 观察记录已保存' : '🎉 太棒了！';
+    var celebHint = isObserved ? '回头查查资料再来补充吧' : '';
 
     // 生成彩纸碎片
     var confettiHtml = '';
-    var confettiColors = ['#7ba862', '#d4a0a0', '#e0b85c', '#8bb4c7', '#d4a373', '#b8d4a0', '#f0c8c8'];
-    for (var i = 0; i < 30; i++) {
+    var confettiColors = isObserved
+      ? ['#b8d4a0', '#c8dec4', '#d4e8c0', '#e0f0d4', '#a8c890']
+      : ['#7ba862', '#d4a0a0', '#e0b85c', '#8bb4c7', '#d4a373', '#b8d4a0', '#f0c8c8'];
+    var confettiCount = isObserved ? 15 : 30;
+    for (var i = 0; i < confettiCount; i++) {
       var color = confettiColors[i % confettiColors.length];
       var left = Math.random() * 100;
       var delay = Math.random() * 2;
@@ -1072,13 +1080,16 @@ var Form = (function() {
     html += '<div class="confetti-container">' + confettiHtml + '</div>';
     html += '<div class="celebration-content">';
     html += '<div class="celebration-icon">' + typeIcon + '</div>';
-    html += '<div class="celebration-title">记录完成！</div>';
+    html += '<div class="celebration-title">' + celebTitle + '</div>';
     html += '<div class="celebration-subtitle">' + escapeHtml(name) + '</div>';
+    if (celebHint) {
+      html += '<div style="font-size:13px; color:var(--gray-400); margin-top:4px;">' + celebHint + '</div>';
+    }
     html += '</div>';
 
     // 卡片预览（Canvas 绘制）
     html += '<canvas id="share-card-canvas" width="540" height="720" style="display:none;"></canvas>';
-    html += '<div class="share-card-preview" id="share-card-preview"></div>';
+    html += '<div class="share-card-preview" id="share-card-preview" style="margin-top:12px;"></div>';
 
     // 按钮
     html += '<div style="display:flex; gap:10px; margin-top:16px;">';
@@ -1088,7 +1099,7 @@ var Form = (function() {
     html += '</div>';
 
     document.getElementById('modal-body').innerHTML = html;
-    document.getElementById('modal-title').textContent = '🎉 太棒了！';
+    document.getElementById('modal-title').textContent = modalTitle;
 
     // 绘制分享卡片
     setTimeout(function() { drawShareCard(record); }, 100);
@@ -1155,15 +1166,18 @@ var Form = (function() {
     }
 
     // 顶部类型标签
+    var statusText = record.status === 'observed' ? '已观察' : '已收录';
+    var badgeText = typeIcon + ' ' + typeText + ' · ' + statusText;
+    var badgeW = Math.max(140, badgeText.length * 12 + 24);
     ctx.fillStyle = typeColor;
     ctx.globalAlpha = 0.15;
-    roundRect(ctx, W / 2 - 60, yPos, 120, 32, 16);
+    roundRect(ctx, W / 2 - badgeW / 2, yPos, badgeW, 32, 16);
     ctx.fill();
     ctx.globalAlpha = 1;
     ctx.fillStyle = typeColor;
     ctx.font = '14px "Smiley Sans", "PingFang SC", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(typeIcon + ' ' + typeText, W / 2, yPos + 22);
+    ctx.fillText(badgeText, W / 2, yPos + 22);
     yPos += 48;
 
     // 主标题（名称）
@@ -1198,7 +1212,23 @@ var Form = (function() {
     // 信息字段
     ctx.textAlign = 'left';
     var fields = [];
-    if (record.type === 'plant') {
+    if (record.type === 'plant' && record.status === 'observed') {
+      // 已观察：显示观察数据
+      var obsItems = [];
+      if (record.lifeForm) obsItems.push(record.lifeForm);
+      if (record.leafArrangement) obsItems.push(record.leafArrangement);
+      if (record.leafStructure) obsItems.push(record.leafStructure);
+      if (record.petalCount) obsItems.push('花:' + record.petalCount);
+      if (record.flowerForm) obsItems.push(record.flowerForm);
+      if (record.fruitType) obsItems.push('果:' + record.fruitType);
+      if (record.intuitionCategory) obsItems.push('猜:' + record.intuitionCategory);
+      if (obsItems.length > 0) {
+        fields.push({ label: '观察', value: obsItems.join(' · ') });
+      }
+      if (record.location) fields.push({ label: '地点', value: record.location });
+      if (record.attraction) fields.push({ label: '吸引我', value: record.attraction });
+    } else if (record.type === 'plant') {
+      // 已收录：显示专业信息
       if (record.family) fields.push({ label: '科', value: record.family });
       if (record.genus) fields.push({ label: '属', value: record.genus });
       if (record.features) fields.push({ label: '特征', value: record.features });
