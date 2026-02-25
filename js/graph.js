@@ -23,7 +23,7 @@ var Graph = (function() {
     html += '<div class="graph-stats-numbers">';
     html += '<div class="graph-stat-item"><div class="graph-stat-num">' + stats.totalPlants + '</div><div class="graph-stat-label">种植物</div></div>';
     html += '<div class="graph-stat-item"><div class="graph-stat-num">' + stats.totalKnowledge + '</div><div class="graph-stat-label">条知识</div></div>';
-    html += '<div class="graph-stat-item"><div class="graph-stat-num">' + stats.totalEcology + '</div><div class="graph-stat-label">个关联</div></div>';
+    html += '<div class="graph-stat-item"><div class="graph-stat-num">' + stats.totalEcology + '</div><div class="graph-stat-label">个发现</div></div>';
     html += '<div class="graph-stat-item"><div class="graph-stat-num">' + stats.totalFamilies + '</div><div class="graph-stat-label">个科</div></div>';
     html += '</div>';
     html += '</div>';
@@ -47,7 +47,7 @@ var Graph = (function() {
     html += '<div class="graph-legend">';
     html += '<span class="graph-legend-item"><span class="graph-legend-dot" style="background:var(--green);"></span>植物</span>';
     html += '<span class="graph-legend-item"><span class="graph-legend-dot" style="background:var(--blue);"></span>知识</span>';
-    html += '<span class="graph-legend-item"><span class="graph-legend-dot" style="background:var(--orange);"></span>关联</span>';
+    html += '<span class="graph-legend-item"><span class="graph-legend-dot" style="background:var(--orange);"></span>发现</span>';
     html += '<span class="graph-legend-item"><span class="graph-legend-line solid"></span>手动</span>';
     html += '<span class="graph-legend-item"><span class="graph-legend-line dashed"></span>自动</span>';
     html += '</div>';
@@ -538,7 +538,7 @@ var Graph = (function() {
     if (ecology.length === 0) return '';
 
     var html = '<div class="knowledge-section">';
-    html += '<div class="section-title">🔗 生态关联 <span class="count">' + ecology.length + ' 个</span></div>';
+    html += '<div class="section-title">🔍 野外发现 <span class="count">' + ecology.length + ' 个</span></div>';
 
     ecology.forEach(function(item) {
       html += '<div class="knowledge-item" onclick="App.showDetail(\'' + item.id + '\')">';

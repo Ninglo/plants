@@ -16,7 +16,7 @@ var Knowledge = (function() {
         '<div class="empty-state-text">还没有知识记录<br>遇到有趣的植物学知识就来记一笔</div>' +
         '<div style="display:flex; gap:10px; justify-content:center;">' +
         '<button class="btn btn-primary" onclick="Form.openNew(\'knowledge\')">记录知识</button>' +
-        '<button class="btn btn-secondary" onclick="Form.openNew(\'ecology\')">记录关联</button>' +
+        '<button class="btn btn-secondary" onclick="Form.openNew(\'ecology\')">记录发现</button>' +
         '</div></div>';
     }
 
@@ -31,7 +31,7 @@ var Knowledge = (function() {
     html += '<div class="filter-chips">';
     html += '<button class="filter-chip active" id="kf-all" onclick="Knowledge.setFilter(\'all\', this)">全部 (' + total + ')</button>';
     html += '<button class="filter-chip" id="kf-knowledge" onclick="Knowledge.setFilter(\'knowledge\', this)">📖 知识 (' + knowledgeItems.length + ')</button>';
-    html += '<button class="filter-chip" id="kf-ecology" onclick="Knowledge.setFilter(\'ecology\', this)">🔗 关联 (' + ecologyItems.length + ')</button>';
+    html += '<button class="filter-chip" id="kf-ecology" onclick="Knowledge.setFilter(\'ecology\', this)">🔍 发现 (' + ecologyItems.length + ')</button>';
     html += '</div>';
 
     // 列表
@@ -42,7 +42,7 @@ var Knowledge = (function() {
     // 新建按钮
     html += '<div style="display:flex; gap:10px; margin-top:16px;">';
     html += '<button class="btn btn-blue btn-block btn-sm" onclick="Form.openNew(\'knowledge\')">+ 植物学知识</button>';
-    html += '<button class="btn btn-orange btn-block btn-sm" onclick="Form.openNew(\'ecology\')">+ 生态关联</button>';
+    html += '<button class="btn btn-orange btn-block btn-sm" onclick="Form.openNew(\'ecology\')">+ 记录发现</button>';
     html += '</div>';
 
     return html;

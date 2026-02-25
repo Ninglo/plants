@@ -75,7 +75,7 @@ var App = (function() {
     html += '<div class="home-stats">';
     html += '<div class="stat-card"><div class="stat-number">' + stats.totalPlants + '</div><div class="stat-label">种植物</div></div>';
     html += '<div class="stat-card blue"><div class="stat-number">' + stats.totalKnowledge + '</div><div class="stat-label">条知识</div></div>';
-    html += '<div class="stat-card orange"><div class="stat-number">' + stats.totalEcology + '</div><div class="stat-label">个关联</div></div>';
+    html += '<div class="stat-card orange"><div class="stat-number">' + stats.totalEcology + '</div><div class="stat-label">个发现</div></div>';
     html += '</div>';
 
     // 待处理队列
@@ -85,7 +85,7 @@ var App = (function() {
     html += '<div style="display:flex; gap:8px; margin-bottom:20px;">';
     html += '<button class="btn btn-primary btn-sm" style="flex:1;" onclick="Form.openNew(\'plant\')">🌿 记录植物</button>';
     html += '<button class="btn btn-blue btn-sm" style="flex:1;" onclick="Form.openNew(\'knowledge\')">📖 记录知识</button>';
-    html += '<button class="btn btn-orange btn-sm" style="flex:1;" onclick="Form.openNew(\'ecology\')">🔗 记录关联</button>';
+    html += '<button class="btn btn-orange btn-sm" style="flex:1;" onclick="Form.openNew(\'ecology\')">🔍 记录发现</button>';
     html += '</div>';
 
     // 最近记录
@@ -97,7 +97,7 @@ var App = (function() {
       html += '<div class="section-title">最近记录</div>';
       recent.forEach(function(r) {
         var badgeClass = r.type === 'plant' ? 'badge-plant' : r.type === 'knowledge' ? 'badge-knowledge' : 'badge-ecology';
-        var typeLabel = r.type === 'plant' ? '🌿' : r.type === 'knowledge' ? '📖' : '🔗';
+        var typeLabel = r.type === 'plant' ? '🌿' : r.type === 'knowledge' ? '📖' : '🔍';
         var name = r.name || r.title || '未命名';
 
         html += '<div class="knowledge-item" onclick="App.showDetail(\'' + r.id + '\')">';
@@ -141,7 +141,7 @@ var App = (function() {
 
     // 类型标记
     var badgeClass = record.type === 'plant' ? 'badge-plant' : record.type === 'knowledge' ? 'badge-knowledge' : 'badge-ecology';
-    var typeLabel = record.type === 'plant' ? '🌿 植物档案' : record.type === 'knowledge' ? '📖 植物学知识' : '🔗 生态关联';
+    var typeLabel = record.type === 'plant' ? '🌿 植物档案' : record.type === 'knowledge' ? '📖 植物学知识' : '🔍 野外发现';
     html += '<span class="card-type-badge ' + badgeClass + '" style="margin-bottom:12px;">' + typeLabel + '</span>';
 
     // 根据类型渲染字段
@@ -164,7 +164,7 @@ var App = (function() {
       html += renderField('日期', record.date);
     } else {
       html += renderField('主题', record.title);
-      html += renderField('关联对象', record.relatedObjects);
+      html += renderField('涉及对象', record.relatedObjects);
       html += renderField('内容', record.content);
       html += renderField('我的观察', record.observation);
       html += renderField('日期', record.date);
@@ -186,7 +186,7 @@ var App = (function() {
       record.links.forEach(function(linkId) {
         var linked = Storage.getById(linkId);
         if (linked) {
-          var linkIcon = linked.type === 'plant' ? '🌿' : linked.type === 'knowledge' ? '📖' : '🔗';
+          var linkIcon = linked.type === 'plant' ? '🌿' : linked.type === 'knowledge' ? '📖' : '🔍';
           var linkName = linked.name || linked.title || '未命名';
           html += '<div class="detail-link-item" onclick="App.showDetail(\'' + linkId + '\')">';
           html += linkIcon + ' ' + escapeHtml(linkName);

@@ -107,7 +107,7 @@ var Form = (function() {
 
   function getTitle() {
     if (editingId) return '编辑记录';
-    var titles = { plant: '记录新植物', knowledge: '记录植物学知识', ecology: '记录生态关联' };
+    var titles = { plant: '记录新植物', knowledge: '记录植物学知识', ecology: '记录新发现' };
     return titles[currentType] || '新记录';
   }
 
@@ -118,7 +118,7 @@ var Form = (function() {
     html += '<div class="type-selector">';
     html += '<button class="type-btn ' + (currentType === 'plant' ? 'active-plant' : '') + '" onclick="Form.setType(\'plant\')">🌿 植物</button>';
     html += '<button class="type-btn ' + (currentType === 'knowledge' ? 'active-knowledge' : '') + '" onclick="Form.setType(\'knowledge\')">📖 知识</button>';
-    html += '<button class="type-btn ' + (currentType === 'ecology' ? 'active-ecology' : '') + '" onclick="Form.setType(\'ecology\')">🔗 关联</button>';
+    html += '<button class="type-btn ' + (currentType === 'ecology' ? 'active-ecology' : '') + '" onclick="Form.setType(\'ecology\')">🔍 发现</button>';
     html += '</div>';
 
     // 粘贴识别
@@ -259,13 +259,13 @@ var Form = (function() {
     html += '</div>';
 
     html += '<div class="form-group">';
-    html += '<label class="form-label">关联对象</label>';
+    html += '<label class="form-label">涉及对象</label>';
     html += '<div class="input-with-voice"><input type="text" class="form-input" id="f-relatedObjects" placeholder="涉及的物种或因素">' + createVoiceBtn() + '</div>';
     html += '</div>';
 
     html += '<div class="form-group">';
     html += '<label class="form-label">内容</label>';
-    html += '<div class="input-with-voice"><textarea class="form-textarea" id="f-content" rows="6" placeholder="记录关联关系的内容...">' + '</textarea>' + createVoiceBtn() + '</div>';
+    html += '<div class="input-with-voice"><textarea class="form-textarea" id="f-content" rows="6" placeholder="记录你的发现...">' + '</textarea>' + createVoiceBtn() + '</div>';
     html += '</div>';
 
     html += '<div class="form-group">';
@@ -467,8 +467,8 @@ var Form = (function() {
         });
       }
 
-      App.closeModal();
       App.refreshView();
+      showCelebration(record);
     });
   }
 
@@ -819,6 +819,244 @@ var Form = (function() {
     });
   }
 
+  // ========== 保存庆祝 + 可分享卡片 ==========
+
+  function showCelebration(record) {
+    var name = record.name || record.title || '未命名';
+    var typeIcon = record.type === 'plant' ? '🌿' : record.type === 'knowledge' ? '📖' : '🔍';
+    var typeText = record.type === 'plant' ? '植物档案' : record.type === 'knowledge' ? '植物学知识' : '野外发现';
+
+    // 生成彩纸碎片
+    var confettiHtml = '';
+    var confettiColors = ['#7ba862', '#d4a0a0', '#e0b85c', '#8bb4c7', '#d4a373', '#b8d4a0', '#f0c8c8'];
+    for (var i = 0; i < 30; i++) {
+      var color = confettiColors[i % confettiColors.length];
+      var left = Math.random() * 100;
+      var delay = Math.random() * 2;
+      var size = 6 + Math.random() * 8;
+      confettiHtml += '<div class="confetti-piece" style="left:' + left + '%;animation-delay:' + delay + 's;background:' + color + ';width:' + size + 'px;height:' + size + 'px;"></div>';
+    }
+
+    var html = '<div class="celebration-wrap">';
+    html += '<div class="confetti-container">' + confettiHtml + '</div>';
+    html += '<div class="celebration-content">';
+    html += '<div class="celebration-icon">' + typeIcon + '</div>';
+    html += '<div class="celebration-title">记录完成！</div>';
+    html += '<div class="celebration-subtitle">' + escapeHtml(name) + '</div>';
+    html += '</div>';
+
+    // 卡片预览（Canvas 绘制）
+    html += '<canvas id="share-card-canvas" width="540" height="720" style="display:none;"></canvas>';
+    html += '<div class="share-card-preview" id="share-card-preview"></div>';
+
+    // 按钮
+    html += '<div style="display:flex; gap:10px; margin-top:16px;">';
+    html += '<button class="btn btn-primary btn-block" onclick="Form.downloadCard()">📷 保存卡片</button>';
+    html += '<button class="btn btn-block" onclick="App.closeModal()">完成</button>';
+    html += '</div>';
+    html += '</div>';
+
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('modal-title').textContent = '🎉 太棒了！';
+
+    // 绘制分享卡片
+    setTimeout(function() { drawShareCard(record); }, 100);
+  }
+
+  function drawShareCard(record) {
+    var canvas = document.getElementById('share-card-canvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var W = 540, H = 720;
+
+    // 背景
+    ctx.fillStyle = '#fffef9';
+    ctx.fillRect(0, 0, W, H);
+
+    // 水彩风格边框装饰
+    drawWatercolorBorder(ctx, W, H);
+
+    // 类型图标和标签
+    var typeIcon = record.type === 'plant' ? '🌿' : record.type === 'knowledge' ? '📖' : '🔍';
+    var typeText = record.type === 'plant' ? '植物档案' : record.type === 'knowledge' ? '植物学知识' : '野外发现';
+    var typeColor = record.type === 'plant' ? '#7ba862' : record.type === 'knowledge' ? '#8bb4c7' : '#d4a373';
+
+    // 顶部类型标签
+    ctx.fillStyle = typeColor;
+    ctx.globalAlpha = 0.15;
+    roundRect(ctx, W / 2 - 60, 50, 120, 32, 16);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = typeColor;
+    ctx.font = '14px "Smiley Sans", "PingFang SC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(typeIcon + ' ' + typeText, W / 2, 72);
+
+    // 主标题（名称）
+    var name = record.name || record.title || '未命名';
+    ctx.fillStyle = '#33312d';
+    ctx.font = 'bold 28px "Smiley Sans", "PingFang SC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(name.length > 12 ? name.substring(0, 12) + '…' : name, W / 2, 130);
+
+    // 学名（如果有）
+    var yPos = 160;
+    if (record.latinName) {
+      ctx.fillStyle = '#9e9890';
+      ctx.font = 'italic 15px Georgia, "Times New Roman", serif';
+      ctx.fillText(record.latinName.length > 30 ? record.latinName.substring(0, 30) + '…' : record.latinName, W / 2, yPos);
+      yPos += 30;
+    }
+
+    // 分隔线
+    ctx.strokeStyle = typeColor;
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(80, yPos);
+    ctx.lineTo(W - 80, yPos);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    yPos += 30;
+
+    // 信息字段
+    ctx.textAlign = 'left';
+    var fields = [];
+    if (record.type === 'plant') {
+      if (record.family) fields.push({ label: '科', value: record.family });
+      if (record.genus) fields.push({ label: '属', value: record.genus });
+      if (record.features) fields.push({ label: '特征', value: record.features });
+      if (record.location) fields.push({ label: '地点', value: record.location });
+    } else if (record.type === 'knowledge') {
+      if (record.category) fields.push({ label: '分类', value: record.category });
+      if (record.content) fields.push({ label: '内容', value: record.content });
+    } else {
+      if (record.relatedObjects) fields.push({ label: '涉及', value: record.relatedObjects });
+      if (record.content) fields.push({ label: '内容', value: record.content });
+    }
+
+    fields.forEach(function(f) {
+      if (yPos > H - 140) return;
+      ctx.fillStyle = '#9e9890';
+      ctx.font = '13px "Smiley Sans", "PingFang SC", sans-serif';
+      ctx.fillText(f.label, 60, yPos);
+      ctx.fillStyle = '#46433e';
+      ctx.font = '15px "Smiley Sans", "PingFang SC", sans-serif';
+      var val = f.value.length > 40 ? f.value.substring(0, 40) + '…' : f.value;
+      // 处理多行
+      var lines = val.split('\n');
+      lines.forEach(function(line, li) {
+        if (li > 2 || yPos > H - 140) return;
+        var displayLine = line.length > 25 ? line.substring(0, 25) + '…' : line;
+        ctx.fillText(displayLine, 60, yPos + 22 + li * 22);
+      });
+      yPos += 22 + Math.min(lines.length, 3) * 22 + 12;
+    });
+
+    // 标签
+    if (record.tags && record.tags.length > 0 && yPos < H - 120) {
+      yPos += 8;
+      var tagX = 60;
+      ctx.font = '12px "Smiley Sans", "PingFang SC", sans-serif';
+      record.tags.slice(0, 5).forEach(function(tag) {
+        var tw = ctx.measureText('#' + tag).width + 16;
+        if (tagX + tw > W - 60) return;
+        ctx.fillStyle = typeColor;
+        ctx.globalAlpha = 0.12;
+        roundRect(ctx, tagX, yPos - 12, tw, 22, 11);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = typeColor;
+        ctx.fillText('#' + tag, tagX + 8, yPos + 3);
+        tagX += tw + 8;
+      });
+    }
+
+    // 日期
+    if (record.date) {
+      ctx.fillStyle = '#c0bab0';
+      ctx.font = '13px "Smiley Sans", "PingFang SC", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(record.date, W / 2, H - 80);
+    }
+
+    // 底部品牌
+    ctx.fillStyle = '#c0bab0';
+    ctx.font = '12px "Smiley Sans", "PingFang SC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🌱 植物笔记', W / 2, H - 45);
+
+    // 显示预览
+    var preview = document.getElementById('share-card-preview');
+    if (preview) {
+      var img = new Image();
+      img.src = canvas.toDataURL('image/png');
+      img.style.cssText = 'width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);';
+      preview.appendChild(img);
+    }
+  }
+
+  function drawWatercolorBorder(ctx, W, H) {
+    var colors = [
+      'rgba(123,168,98,0.08)',    // 绿
+      'rgba(212,160,160,0.08)',   // 粉
+      'rgba(224,184,92,0.06)',    // 黄
+      'rgba(139,180,199,0.06)',   // 蓝
+      'rgba(184,212,160,0.1)',    // 浅绿
+    ];
+
+    // 四角水彩晕染
+    var spots = [
+      { x: 0, y: 0 },
+      { x: W, y: 0 },
+      { x: 0, y: H },
+      { x: W, y: H },
+      { x: W / 2, y: 0 },
+      { x: W / 2, y: H },
+    ];
+
+    spots.forEach(function(spot, i) {
+      var color = colors[i % colors.length];
+      var r = 120 + Math.random() * 60;
+      var grad = ctx.createRadialGradient(spot.x, spot.y, 0, spot.x, spot.y, r);
+      grad.addColorStop(0, color);
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+    });
+
+    // 边框细线
+    ctx.strokeStyle = 'rgba(123,168,98,0.15)';
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, 16, 16, W - 32, H - 32, 20);
+    ctx.stroke();
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function downloadCard() {
+    var canvas = document.getElementById('share-card-canvas');
+    if (!canvas) return;
+    var link = document.createElement('a');
+    link.download = 'plant-card-' + new Date().toISOString().split('T')[0] + '.png';
+    link.href = canvas.toDataURL('image/png');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   return {
     openNew: openNew,
     openEdit: openEdit,
@@ -834,6 +1072,7 @@ var Form = (function() {
     handleVoice: handleVoice,
     setType: setType,
     togglePasteArea: togglePasteArea,
-    applyPaste: applyPaste
+    applyPaste: applyPaste,
+    downloadCard: downloadCard
   };
 })();

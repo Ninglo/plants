@@ -24,7 +24,7 @@ var Timeline = (function() {
     html += '<button class="filter-chip active" data-filter="all" onclick="Timeline.setFilter(\'all\', this)">全部</button>';
     html += '<button class="filter-chip" data-filter="plant" onclick="Timeline.setFilter(\'plant\', this)">🌿 植物</button>';
     html += '<button class="filter-chip" data-filter="knowledge" onclick="Timeline.setFilter(\'knowledge\', this)">📖 知识</button>';
-    html += '<button class="filter-chip" data-filter="ecology" onclick="Timeline.setFilter(\'ecology\', this)">🔗 关联</button>';
+    html += '<button class="filter-chip" data-filter="ecology" onclick="Timeline.setFilter(\'ecology\', this)">🔍 发现</button>';
     html += '</div>';
 
     // 时间线
@@ -48,7 +48,7 @@ var Timeline = (function() {
 
       var dotClass = r.type === 'knowledge' ? 'knowledge' : r.type === 'ecology' ? 'ecology' : '';
       var badgeClass = r.type === 'plant' ? 'badge-plant' : r.type === 'knowledge' ? 'badge-knowledge' : 'badge-ecology';
-      var typeLabel = r.type === 'plant' ? '🌿 植物' : r.type === 'knowledge' ? '📖 知识' : '🔗 关联';
+      var typeLabel = r.type === 'plant' ? '🌿 植物' : r.type === 'knowledge' ? '📖 知识' : '🔍 发现';
       var name = r.name || r.title || '未命名';
       var excerpt = r.notes || r.content || r.attraction || r.observation || '';
 

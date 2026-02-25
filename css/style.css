@@ -1,30 +1,39 @@
+/* ========== 字体加载 ========== */
+@font-face {
+  font-family: "Smiley Sans";
+  src: url("https://cdn.jsdelivr.net/npm/smiley-sans@1.1.1/dist/SmileySans-Oblique.ttf.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ========== 基础变量（水彩自然风） ========== */
 :root {
-  --green: #6b9b4a;
-  --green-light: #eaf2e0;
-  --green-bg: #f2f7ec;
-  --green-dark: #4a7a32;
-  --blue: #7ba5b8;
-  --blue-light: #e4eef3;
-  --orange: #c08a5e;
-  --orange-light: #f5e8dc;
-  --yellow: #cda24a;
-  --yellow-light: #faf1de;
-  --pink: #c4918a;
-  --pink-light: #f5e3df;
-  --gray-50: #faf8f4;
-  --gray-100: #f3f0ea;
-  --gray-200: #e6e2da;
-  --gray-300: #d3cec5;
-  --gray-400: #b3ada3;
-  --gray-500: #918b80;
-  --gray-600: #726c62;
-  --gray-700: #5a554c;
-  --gray-800: #3e3b36;
-  --gray-900: #2d2a26;
-  --white: #fffdf8;
-  --shadow: 0 2px 12px rgba(45,42,38,0.06);
-  --shadow-lg: 0 6px 24px rgba(45,42,38,0.10);
+  --green: #7ba862;
+  --green-light: #f0f6e8;
+  --green-bg: #f7faf2;
+  --green-dark: #5a8a42;
+  --blue: #8bb4c7;
+  --blue-light: #edf5f9;
+  --orange: #d4a373;
+  --orange-light: #faf0e6;
+  --yellow: #e0b85c;
+  --yellow-light: #fdf6e3;
+  --pink: #d4a0a0;
+  --pink-light: #faf0ef;
+  --gray-50: #fdfcf9;
+  --gray-100: #f7f5f0;
+  --gray-200: #eeebe4;
+  --gray-300: #ddd9d0;
+  --gray-400: #c0bab0;
+  --gray-500: #9e9890;
+  --gray-600: #7d776e;
+  --gray-700: #635e56;
+  --gray-800: #46433e;
+  --gray-900: #33312d;
+  --white: #fffef9;
+  --shadow: 0 2px 12px rgba(120,100,80,0.05);
+  --shadow-lg: 0 6px 24px rgba(120,100,80,0.08);
   --radius: 14px;
   --radius-sm: 10px;
   --nav-height: 62px;
@@ -641,7 +650,7 @@ body {
 
 /* ========== 图谱 ========== */
 .graph-stats {
-  background: linear-gradient(135deg, #7ba862, #5a8a42);
+  background: linear-gradient(135deg, #8bb87a, #6ba35a);
   color: #fffdf8;
   border-radius: var(--radius);
   padding: 22px;
@@ -1076,6 +1085,103 @@ body {
 .graph-legend-line.dashed {
   border-top-style: dashed;
   border-color: var(--gray-300);
+}
+
+/* ========== 庆祝动效 + 分享卡片 ========== */
+.celebration-wrap {
+  text-align: center;
+  padding: 10px 0 0;
+  position: relative;
+  overflow: hidden;
+}
+.confetti-container {
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: confetti-fall 3s ease-in-out forwards;
+}
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(420px) rotate(720deg) scale(0.3);
+  }
+}
+.celebration-content {
+  position: relative;
+  z-index: 1;
+  animation: celebration-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@keyframes celebration-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.celebration-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+  animation: celebration-bounce 0.6s ease 0.3s both;
+}
+@keyframes celebration-bounce {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.3); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.celebration-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin-bottom: 4px;
+}
+.celebration-subtitle {
+  font-size: 14px;
+  color: var(--gray-500);
+  margin-bottom: 20px;
+}
+.share-card-preview {
+  position: relative;
+  z-index: 1;
+  margin: 0 auto;
+  max-width: 320px;
+  animation: card-slide-up 0.6s ease 0.4s both;
+}
+@keyframes card-slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.share-card-preview img {
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(120, 100, 80, 0.12);
 }
 
 /* ========== 异步加载照片占位 ========== */

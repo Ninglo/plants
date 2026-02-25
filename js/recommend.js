@@ -87,7 +87,7 @@ var Recommend = (function() {
     if (current.type === 'plant' && current.name &&
         candidate.type === 'ecology' && candidate.relatedObjects) {
       if (candidate.relatedObjects.indexOf(current.name) !== -1) {
-        reasons.push('被关联提及');
+        reasons.push('被发现提及');
         score += WEIGHTS.NAME_IN_RELATED;
       }
     }
@@ -96,7 +96,7 @@ var Recommend = (function() {
     if (current.type === 'ecology' && current.relatedObjects &&
         candidate.type === 'plant' && candidate.name) {
       if (current.relatedObjects.indexOf(candidate.name) !== -1) {
-        reasons.push('关联对象: ' + candidate.name);
+        reasons.push('涉及对象: ' + candidate.name);
         score += WEIGHTS.NAME_IN_RELATED;
       }
     }
