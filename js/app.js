@@ -183,30 +183,76 @@ var App = (function() {
     if (record.type === 'plant') {
       html += renderField('中文名', record.name);
 
-      // 观察记录区
-      var obsFields = [
+      // 观察记录区（分组展示）
+      var obsGroups = [
+        { title: '整体', icon: '🌳', fields: [
+          { key: 'growthForm', label: '形态' }
+        ]},
+        { title: '叶片', icon: '🍃', fields: [
+          { key: 'leafArrangement', label: '排列' },
+          { key: 'leafType', label: '结构' },
+          { key: 'leafEdge', label: '边缘' },
+          { key: 'leafVein', label: '叶脉' },
+          { key: 'leafTexture', label: '手感' }
+        ]},
+        { title: '花朵', icon: '🌸', fields: [
+          { key: 'petalCount', label: '花瓣' },
+          { key: 'flowerSymmetry', label: '对称' },
+          { key: 'petalConnection', label: '连接' },
+          { key: 'flowerCluster', label: '花序' }
+        ]},
+        { title: '果实', icon: '🍎', fields: [
+          { key: 'fruitTexture', label: '质感' },
+          { key: 'fruitDetail', label: '类型' }
+        ]}
+      ];
+      // 旧版字段兼容
+      var oldFields = [
         { key: 'lifeForm', label: '生活型' },
-        { key: 'leafArrangement', label: '叶序' },
         { key: 'leafStructure', label: '叶结构' },
-        { key: 'petalCount', label: '花瓣数量' },
-        { key: 'flowerForm', label: '花整体形态' },
-        { key: 'fruitType', label: '果实类型' },
+        { key: 'flowerForm', label: '花形态' },
+        { key: 'fruitType', label: '果实' },
         { key: 'intuitionCategory', label: '直觉分类' }
       ];
-      var hasObs = obsFields.some(function(f) { return record[f.key]; });
-      if (hasObs) {
+      var hasNewObs = obsGroups.some(function(g) {
+        return g.fields.some(function(f) { return record[f.key]; });
+      });
+      var hasOldObs = oldFields.some(function(f) { return record[f.key]; });
+      if (hasNewObs || hasOldObs) {
         html += '<div class="detail-obs-section">';
         html += '<div class="detail-obs-title">我的观察</div>';
-        html += '<div class="detail-obs-chips">';
-        obsFields.forEach(function(f) {
-          if (record[f.key]) {
-            html += '<div class="detail-obs-item">';
-            html += '<span class="detail-obs-label">' + f.label + '</span>';
-            html += '<span class="detail-obs-value">' + escapeHtml(record[f.key]) + '</span>';
-            html += '</div>';
-          }
-        });
-        html += '</div></div>';
+        if (hasNewObs) {
+          obsGroups.forEach(function(g) {
+            var groupHasData = g.fields.some(function(f) { return record[f.key]; });
+            if (!groupHasData) return;
+            html += '<div style="margin-bottom:8px;">';
+            html += '<div style="font-size:12px;color:var(--gray-400);margin-bottom:4px;">' + g.icon + ' ' + g.title + '</div>';
+            html += '<div class="detail-obs-chips">';
+            g.fields.forEach(function(f) {
+              if (record[f.key]) {
+                html += '<div class="detail-obs-item">';
+                html += '<span class="detail-obs-label">' + f.label + '</span>';
+                html += '<span class="detail-obs-value">' + escapeHtml(record[f.key]) + '</span>';
+                html += '</div>';
+              }
+            });
+            html += '</div></div>';
+          });
+        }
+        // 显示旧版字段（如果有且新版对应字段为空）
+        if (hasOldObs && !hasNewObs) {
+          html += '<div class="detail-obs-chips">';
+          oldFields.forEach(function(f) {
+            if (record[f.key]) {
+              html += '<div class="detail-obs-item">';
+              html += '<span class="detail-obs-label">' + f.label + '</span>';
+              html += '<span class="detail-obs-value">' + escapeHtml(record[f.key]) + '</span>';
+              html += '</div>';
+            }
+          });
+          html += '</div>';
+        }
+        html += '</div>';
       }
 
       html += renderField('学名', record.latinName);

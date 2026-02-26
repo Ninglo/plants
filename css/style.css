@@ -1317,6 +1317,49 @@ img[data-photo-id] {
   color: var(--green);
 }
 
+/* ========== 观察部位选择器 ========== */
+.obs-part-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+.obs-part-chip {
+  flex: 1;
+  padding: 12px 8px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--gray-300);
+  background: rgba(255,254,249,0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  font-size: 15px;
+  text-align: center;
+}
+.obs-part-chip:active {
+  transform: scale(0.96);
+}
+.obs-part-chip.active {
+  border-color: var(--green);
+  background: rgba(220,244,200,0.5);
+  color: var(--green-dark);
+  font-weight: 600;
+}
+
+/* ========== 观察字段分组 ========== */
+.obs-field-group {
+  margin-top: 14px;
+  padding: 14px 0 0;
+  border-top: 1px dashed var(--gray-200);
+}
+.obs-group-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-600);
+  margin-bottom: 12px;
+}
+
 /* ========== 表单分区 ========== */
 .form-section {
   border: 1.5px solid rgba(221,217,208,0.4);

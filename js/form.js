@@ -6,78 +6,156 @@ var Form = (function() {
   var currentLinks = [];
   var editingId = null;
 
-  // 观察字段定义
-  var OBSERVATION_FIELDS = [
+  // ===== 观察字段定义（按分组） =====
+  var currentObsParts = []; // 当前选中的观察部位: ['leaf','flower','fruit']
+
+  // 基础字段（始终显示）
+  var OBS_BASE = [
     {
-      id: 'lifeForm', label: '生活型', desc: '这棵植物整体什么样子？',
+      id: 'growthForm', label: '植物长什么样', desc: '远看整体形态',
       options: [
-        { value: '乔木', desc: '高大的树' },
-        { value: '灌木', desc: '矮矮的丛' },
-        { value: '草本', desc: '软软的草' },
-        { value: '藤本', desc: '会攀爬' },
-        { value: '水生', desc: '长在水里' }
+        { value: '乔木', desc: '高大的树，有粗壮树干' },
+        { value: '灌木', desc: '矮矮的丛，从根部分很多枝' },
+        { value: '草本', desc: '茎是软的，不是木头' },
+        { value: '藤本', desc: '会攀爬或缠绕别的东西' },
+        { value: '匍匐', desc: '贴着地面长' }
       ]
-    },
+    }
+  ];
+
+  // 叶片观察字段
+  var OBS_LEAF = [
     {
-      id: 'leafArrangement', label: '叶序', desc: '叶子怎么长在茎上？',
+      id: 'leafArrangement', label: '叶子怎么排列', desc: '看叶子在茎上的位置',
       options: [
-        { value: '互生', desc: '左右交替长' },
-        { value: '对生', desc: '面对面长' },
-        { value: '轮生', desc: '围一圈' },
+        { value: '交替生长', desc: '一个一个，左右交替像楼梯' },
+        { value: '两两相对', desc: '两片面对面，像张开双臂' },
+        { value: '围成一圈', desc: '三片以上围一圈，像车轮' },
+        { value: '贴地散开', desc: '全贴在地面，像蒲公英' },
         { value: '不确定', desc: '' }
       ]
     },
     {
-      id: 'leafStructure', label: '叶结构', desc: '一片叶子的样子？',
+      id: 'leafType', label: '叶子结构', desc: '看叶柄上是一整片还是好几片',
       options: [
-        { value: '单叶', desc: '一片完整的叶' },
-        { value: '复叶', desc: '一根柄上好几片小叶' },
+        { value: '一整片', desc: '一片完整的叶子，像扑克牌' },
+        { value: '羽毛状', desc: '小叶沿中轴排列，像羽毛' },
+        { value: '手掌状', desc: '小叶从一个点散开，像手掌' },
+        { value: '三片小叶', desc: '就三片，像三叶草' },
         { value: '不确定', desc: '' }
       ]
     },
     {
-      id: 'petalCount', label: '花瓣数量', desc: '数一数花瓣',
+      id: 'leafEdge', label: '叶子边缘', desc: '用手指沿边缘感受一下',
       options: [
-        { value: '3或6', desc: '' },
-        { value: '4', desc: '' },
-        { value: '5', desc: '' },
-        { value: '很多', desc: '' },
-        { value: '无花', desc: '' },
+        { value: '光滑', desc: '像丝带一样顺滑' },
+        { value: '锯齿', desc: '一排小齿，像锯子' },
+        { value: '圆波浪', desc: '圆圆的起伏，像扇贝边' },
+        { value: '深裂', desc: '有深深的裂口，像手指' },
         { value: '不确定', desc: '' }
       ]
     },
     {
-      id: 'flowerForm', label: '花整体形态', desc: '花是怎么开的？',
+      id: 'leafVein', label: '叶脉走向', desc: '对着光看叶脉的纹路',
       options: [
-        { value: '单朵', desc: '' },
-        { value: '一串', desc: '' },
-        { value: '一团像大花', desc: '' },
-        { value: '无花', desc: '' },
+        { value: '平行', desc: '像铁轨一样平行排列' },
+        { value: '鱼骨状', desc: '中间一条主脉，两边分叉' },
+        { value: '手掌状', desc: '几条主脉从底部散开' },
         { value: '不确定', desc: '' }
       ]
     },
     {
-      id: 'fruitType', label: '果实类型', desc: '果子摸起来什么感觉？',
+      id: 'leafTexture', label: '叶子手感', desc: '轻轻摸一下叶片',
       options: [
-        { value: '多汁', desc: '' },
-        { value: '有硬核', desc: '' },
-        { value: '干燥裂开', desc: '' },
-        { value: '很轻', desc: '' },
-        { value: '无果', desc: '' },
-        { value: '不确定', desc: '' }
-      ]
-    },
-    {
-      id: 'intuitionCategory', label: '直觉分类', desc: '凭感觉猜一猜？',
-      options: [
-        { value: '蔷薇类', desc: '' },
-        { value: '豆科类', desc: '' },
-        { value: '菊科类', desc: '' },
-        { value: '禾本科', desc: '' },
-        { value: '其他', desc: '都不像' },
+        { value: '薄而软', desc: '像纸一样薄' },
+        { value: '厚而硬', desc: '像皮革一样有韧性' },
+        { value: '多汁肉质', desc: '厚厚的多汁，像芦荟' },
+        { value: '毛茸茸', desc: '有细毛，像桃子皮' },
+        { value: '光滑发亮', desc: '滑滑的，像打了蜡' },
         { value: '不确定', desc: '' }
       ]
     }
+  ];
+
+  // 花朵观察字段
+  var OBS_FLOWER = [
+    {
+      id: 'petalCount', label: '花瓣几片', desc: '数一数花瓣的数量',
+      options: [
+        { value: '3或6片', desc: '' },
+        { value: '4片', desc: '' },
+        { value: '5片', desc: '' },
+        { value: '很多片', desc: '多到数不清' },
+        { value: '看不清', desc: '太小或太密集' },
+        { value: '不确定', desc: '' }
+      ]
+    },
+    {
+      id: 'flowerSymmetry', label: '花的形状', desc: '正面看这朵花',
+      options: [
+        { value: '像星星', desc: '均匀辐射，哪边看都一样' },
+        { value: '像嘴巴', desc: '分上下两半，像张开的嘴' },
+        { value: '像蝴蝶', desc: '像蝴蝶展翅，有旗瓣和翼瓣' },
+        { value: '不确定', desc: '' }
+      ]
+    },
+    {
+      id: 'petalConnection', label: '花瓣连在一起吗', desc: '看花瓣底部',
+      options: [
+        { value: '一片片分开', desc: '能单独摘下一片' },
+        { value: '连成筒状', desc: '底部连在一起，像喇叭或杯子' },
+        { value: '不确定', desc: '' }
+      ]
+    },
+    {
+      id: 'flowerCluster', label: '花怎么聚在一起', desc: '一朵还是一群？怎么排列？',
+      options: [
+        { value: '单独一朵', desc: '' },
+        { value: '一串', desc: '沿着茎排列，像一串葡萄' },
+        { value: '像伞', desc: '从一个点撑开，像打伞' },
+        { value: '挤成圆盘', desc: '很多小花挤一起，像菊花' },
+        { value: '像麦穗', desc: '花直接贴着茎，密密排列' },
+        { value: '不确定', desc: '' }
+      ]
+    }
+  ];
+
+  // 果实观察字段
+  var OBS_FRUIT = [
+    {
+      id: 'fruitTexture', label: '果实质感', desc: '看看摸摸果实',
+      options: [
+        { value: '多汁有果肉', desc: '像番茄或桃子' },
+        { value: '干燥的', desc: '硬的或纸质的，像花生壳' },
+        { value: '不确定', desc: '' }
+      ]
+    },
+    {
+      id: 'fruitDetail', label: '果实长什么样', desc: '仔细看看它的样子',
+      options: [
+        { value: '有硬核', desc: '果肉里有硬核，像桃子樱桃' },
+        { value: '多籽浆果', desc: '种子散在果肉里，像番茄' },
+        { value: '豆荚', desc: '两边裂开，像豌豆荚' },
+        { value: '干盒裂开', desc: '像盒子裂开撒种子' },
+        { value: '带翅膀', desc: '能飞的种子，像枫树直升机' },
+        { value: '坚果', desc: '有硬壳，像橡果或栗子' },
+        { value: '不确定', desc: '' }
+      ]
+    }
+  ];
+
+  // 获取所有观察字段（用于遍历）
+  function getAllObsFields() {
+    return OBS_BASE.concat(OBS_LEAF).concat(OBS_FLOWER).concat(OBS_FRUIT);
+  }
+
+  // 兼容旧版字段映射（旧数据能正确显示）
+  var OLD_OBS_FIELDS = [
+    { key: 'lifeForm', label: '生活型' },
+    { key: 'leafStructure', label: '叶结构' },
+    { key: 'flowerForm', label: '花整体形态' },
+    { key: 'fruitType', label: '果实类型' },
+    { key: 'intuitionCategory', label: '直觉分类' }
   ];
 
   function renderChipField(field, selectedValue) {
@@ -101,6 +179,28 @@ var Form = (function() {
     var group = btn.parentElement;
     group.querySelectorAll('.obs-chip').forEach(function(c) { c.classList.remove('active'); });
     btn.classList.add('active');
+  }
+
+  // 切换观察部位（多选）
+  function toggleObsPart(part) {
+    var idx = currentObsParts.indexOf(part);
+    if (idx === -1) {
+      currentObsParts.push(part);
+    } else {
+      currentObsParts.splice(idx, 1);
+    }
+    // 更新按钮高亮
+    var btns = document.querySelectorAll('.obs-part-chip');
+    btns.forEach(function(b) {
+      b.classList.toggle('active', currentObsParts.indexOf(b.getAttribute('data-part')) !== -1);
+    });
+    // 显示/隐藏对应字段组
+    ['leaf', 'flower', 'fruit'].forEach(function(p) {
+      var group = document.getElementById('obs-group-' + p);
+      if (group) {
+        group.style.display = currentObsParts.indexOf(p) !== -1 ? 'block' : 'none';
+      }
+    });
   }
 
   function getChipVal(fieldId) {
@@ -155,6 +255,7 @@ var Form = (function() {
     currentPhotos = [];
     currentTags = [];
     currentLinks = [];
+    currentObsParts = [];
     render();
     App.openModal(getTitle());
   }
@@ -167,6 +268,7 @@ var Form = (function() {
     currentType = record.type;
     currentTags = record.tags || [];
     currentLinks = record.links || [];
+    currentObsParts = (record.observedParts || []).slice();
 
     var photoIds = record.photoIds || [];
     if (photoIds.length > 0) {
@@ -192,6 +294,7 @@ var Form = (function() {
     currentType = record.type || 'plant';
     currentTags = record.tags || [];
     currentLinks = record.links || [];
+    currentObsParts = (record.observedParts || []).slice();
 
     var photoIds = record.photoIds || [];
     if (photoIds.length > 0) {
@@ -305,10 +408,38 @@ var Form = (function() {
     // 照片
     html += renderPhotoUpload();
 
-    // 7 个观察 chip 字段
-    OBSERVATION_FIELDS.forEach(function(field) {
+    // 基础字段（始终显示）
+    OBS_BASE.forEach(function(field) {
       html += renderChipField(field, '');
     });
+
+    // 今天看到了什么？（多选前置选择器）
+    html += '<div class="form-group">';
+    html += '<label class="form-label">今天观察到了什么？</label>';
+    html += '<div class="form-hint">可以多选，只展示你看到的部分</div>';
+    html += '<div class="obs-part-group">';
+    html += '<button type="button" class="obs-part-chip' + (currentObsParts.indexOf('leaf') !== -1 ? ' active' : '') + '" data-part="leaf" onclick="Form.toggleObsPart(\'leaf\')">🍃 叶子</button>';
+    html += '<button type="button" class="obs-part-chip' + (currentObsParts.indexOf('flower') !== -1 ? ' active' : '') + '" data-part="flower" onclick="Form.toggleObsPart(\'flower\')">🌸 花</button>';
+    html += '<button type="button" class="obs-part-chip' + (currentObsParts.indexOf('fruit') !== -1 ? ' active' : '') + '" data-part="fruit" onclick="Form.toggleObsPart(\'fruit\')">🍎 果实</button>';
+    html += '</div></div>';
+
+    // 叶片字段组
+    html += '<div id="obs-group-leaf" class="obs-field-group" style="display:' + (currentObsParts.indexOf('leaf') !== -1 ? 'block' : 'none') + ';">';
+    html += '<div class="obs-group-header">🍃 叶片观察</div>';
+    OBS_LEAF.forEach(function(field) { html += renderChipField(field, ''); });
+    html += '</div>';
+
+    // 花朵字段组
+    html += '<div id="obs-group-flower" class="obs-field-group" style="display:' + (currentObsParts.indexOf('flower') !== -1 ? 'block' : 'none') + ';">';
+    html += '<div class="obs-group-header">🌸 花朵观察</div>';
+    OBS_FLOWER.forEach(function(field) { html += renderChipField(field, ''); });
+    html += '</div>';
+
+    // 果实字段组
+    html += '<div id="obs-group-fruit" class="obs-field-group" style="display:' + (currentObsParts.indexOf('fruit') !== -1 ? 'block' : 'none') + ';">';
+    html += '<div class="obs-group-header">🍎 果实观察</div>';
+    OBS_FRUIT.forEach(function(field) { html += renderChipField(field, ''); });
+    html += '</div>';
 
     html += '<div class="form-row">';
     html += '<div class="form-group"><label class="form-label">发现日期</label><input type="date" class="form-input" id="f-date" value="' + new Date().toISOString().split('T')[0] + '"></div>';
@@ -512,8 +643,16 @@ var Form = (function() {
       setVal('f-attraction', record.attraction);
       setVal('f-notes', record.notes);
       setVal('f-thoughts', record.thoughts);
+      // 恢复观察部位选择
+      if (record.observedParts && record.observedParts.length > 0) {
+        record.observedParts.forEach(function(part) {
+          if (currentObsParts.indexOf(part) === -1) {
+            toggleObsPart(part);
+          }
+        });
+      }
       // 恢复观察 chip 选中状态
-      OBSERVATION_FIELDS.forEach(function(field) {
+      getAllObsFields().forEach(function(field) {
         if (record[field.id]) {
           var group = document.querySelector('.chip-group[data-field="' + field.id + '"]');
           if (group) {
@@ -569,8 +708,9 @@ var Form = (function() {
       record.attraction = getVal('f-attraction');
       record.notes = getVal('f-notes');
       record.thoughts = getVal('f-thoughts');
-      // 观察字段
-      OBSERVATION_FIELDS.forEach(function(field) {
+      // 观察部位和字段
+      record.observedParts = currentObsParts.slice();
+      getAllObsFields().forEach(function(field) {
         record[field.id] = getChipVal(field.id);
       });
     } else if (currentType === 'knowledge') {
@@ -659,8 +799,9 @@ var Form = (function() {
       thoughts: getVal('f-thoughts')
     };
 
-    // 收集观察 chip 选择
-    OBSERVATION_FIELDS.forEach(function(field) {
+    // 收集观察部位和 chip 选择
+    record.observedParts = currentObsParts.slice();
+    getAllObsFields().forEach(function(field) {
       record[field.id] = getChipVal(field.id);
     });
 
@@ -1215,13 +1356,18 @@ var Form = (function() {
     if (record.type === 'plant' && record.status === 'observed') {
       // 已观察：显示观察数据
       var obsItems = [];
-      if (record.lifeForm) obsItems.push(record.lifeForm);
-      if (record.leafArrangement) obsItems.push(record.leafArrangement);
-      if (record.leafStructure) obsItems.push(record.leafStructure);
+      // 新版字段
+      if (record.growthForm) obsItems.push(record.growthForm);
+      if (record.leafArrangement) obsItems.push('叶:' + record.leafArrangement);
+      if (record.leafType) obsItems.push(record.leafType);
       if (record.petalCount) obsItems.push('花:' + record.petalCount);
-      if (record.flowerForm) obsItems.push(record.flowerForm);
-      if (record.fruitType) obsItems.push('果:' + record.fruitType);
-      if (record.intuitionCategory) obsItems.push('猜:' + record.intuitionCategory);
+      if (record.flowerSymmetry) obsItems.push(record.flowerSymmetry);
+      if (record.fruitTexture) obsItems.push('果:' + record.fruitTexture);
+      // 旧版字段兼容
+      if (record.lifeForm && !record.growthForm) obsItems.push(record.lifeForm);
+      if (record.leafStructure && !record.leafType) obsItems.push(record.leafStructure);
+      if (record.flowerForm && !record.flowerCluster) obsItems.push(record.flowerForm);
+      if (record.fruitType && !record.fruitTexture) obsItems.push('果:' + record.fruitType);
       if (obsItems.length > 0) {
         fields.push({ label: '观察', value: obsItems.join(' · ') });
       }
@@ -1369,6 +1515,7 @@ var Form = (function() {
     save: save,
     saveObservation: saveObservation,
     selectChip: selectChip,
+    toggleObsPart: toggleObsPart,
     deleteRecord: deleteRecord,
     addPhotos: addPhotos,
     removePhoto: removePhoto,
