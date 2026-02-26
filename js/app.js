@@ -311,6 +311,10 @@ var App = (function() {
     } else {
       html += '<button class="btn btn-primary btn-block" onclick="Form.openEdit(\'' + record.id + '\')">编辑</button>';
     }
+    // AI 聊天入口
+    if (record.type === 'plant' && record.photoIds && record.photoIds.length > 0) {
+      html += '<button class="btn btn-block" style="margin-top:8px; border-color:var(--orange); color:var(--orange);" onclick="Chat.openChat(\'' + record.id + '\')">🤖 和AI聊聊</button>';
+    }
     html += '<button class="btn btn-danger" onclick="App.deleteFromDetail(\'' + record.id + '\')">删除</button>';
     html += '</div>';
 
@@ -352,26 +356,137 @@ var App = (function() {
 
   // 同步模态
   function openSyncModal() {
-    var html = '<div class="sync-btns">';
+    var html = '';
+
+    // ===== 云端同步区 =====
+    html += '<div class="sync-section">';
+    html += '<div class="sync-section-title">☁️ 云端同步</div>';
+    if (Sync.hasToken()) {
+      html += '<div class="sync-token-row">';
+      html += '<span class="sync-token-masked">' + Sync.maskToken(Sync.getToken()) + '</span>';
+      html += '<a href="javascript:void(0)" class="sync-clear-link" onclick="App.clearSyncToken()">清除</a>';
+      html += '</div>';
+      html += '<button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="App.syncToCloud()">同步</button>';
+      var lastSync = Sync.formatLastSync();
+      if (lastSync) {
+        html += '<div class="sync-last-time">上次同步：' + lastSync + '</div>';
+      }
+    } else {
+      html += '<input type="text" class="sync-token-input" id="sync-token-input" placeholder="粘贴 GitHub Personal Access Token (gist scope)">';
+      html += '<button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="App.saveSyncToken()">验证并保存</button>';
+      html += '<div style="font-size:12px; color:var(--gray-400); margin-top:6px;">需要一个有 gist 权限的 Token，两台设备用同一个</div>';
+    }
+    html += '<div class="sync-result" id="sync-cloud-result"></div>';
+    html += '</div>';
+
+    // ===== 分隔线 =====
+    html += '<div class="sync-divider"></div>';
+
+    // ===== 文件导入导出 =====
+    html += '<div class="sync-section">';
+    html += '<div class="sync-section-title">📁 文件传输</div>';
+    html += '<div class="sync-btns">';
 
     html += '<button class="sync-btn" onclick="App.doExport()">';
     html += '<div class="sync-btn-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>';
-    html += '<div><div class="sync-btn-title">导出到其他设备</div>';
-    html += '<div class="sync-btn-desc">下载 JSON 文件，通过 AirDrop 发送</div></div>';
+    html += '<div><div class="sync-btn-title">导出</div>';
+    html += '<div class="sync-btn-desc">下载 JSON，AirDrop 发送</div></div>';
     html += '</button>';
 
     html += '<label class="sync-btn" style="cursor:pointer;">';
     html += '<input type="file" accept=".json" style="display:none" onchange="App.doImport(this.files)">';
     html += '<div class="sync-btn-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>';
-    html += '<div><div class="sync-btn-title">从其他设备导入</div>';
-    html += '<div class="sync-btn-desc">选择收到的 JSON 文件，自动合并</div></div>';
+    html += '<div><div class="sync-btn-title">导入</div>';
+    html += '<div class="sync-btn-desc">选择 JSON 文件合并</div></div>';
     html += '</label>';
 
     html += '</div>';
     html += '<div class="sync-result" id="sync-result"></div>';
+    html += '</div>';
+
+    // ===== API 密钥区 =====
+    html += '<div class="sync-divider"></div>';
+    html += '<div class="sync-section">';
+    html += '<div class="sync-section-title">🔑 AI 对话密钥</div>';
+    var openaiKey = localStorage.getItem('plants_openai_key') || '';
+    if (openaiKey) {
+      html += '<div class="sync-token-row">';
+      html += '<span class="sync-token-masked">sk-****' + openaiKey.slice(-4) + '</span>';
+      html += '<a href="javascript:void(0)" class="sync-clear-link" onclick="App.clearOpenAIKey()">清除</a>';
+      html += '</div>';
+    } else {
+      html += '<input type="text" class="sync-token-input" id="openai-key-input" placeholder="粘贴 OpenAI API Key (sk-...)">';
+      html += '<button class="btn btn-block" style="margin-top:8px;" onclick="App.saveOpenAIKey()">保存</button>';
+    }
+    html += '</div>';
 
     document.getElementById('modal-body').innerHTML = html;
-    openModal('数据同步');
+    openModal('设置');
+  }
+
+  function syncToCloud() {
+    var resultEl = document.getElementById('sync-cloud-result');
+    resultEl.style.display = 'block';
+    resultEl.style.background = 'var(--gray-100)';
+    resultEl.style.color = 'var(--gray-600)';
+    resultEl.textContent = '正在同步...';
+
+    Sync.doSync(function(msg) {
+      resultEl.textContent = msg;
+    }).then(function(result) {
+      resultEl.style.background = 'var(--green-light)';
+      resultEl.style.color = 'var(--green)';
+      resultEl.textContent = result.message;
+      refreshView();
+    }).catch(function(err) {
+      resultEl.style.background = '#ffebee';
+      resultEl.style.color = '#c62828';
+      resultEl.textContent = err.message || '同步失败';
+    });
+  }
+
+  function saveSyncToken() {
+    var input = document.getElementById('sync-token-input');
+    var token = (input && input.value || '').trim();
+    if (!token) return;
+
+    var resultEl = document.getElementById('sync-cloud-result');
+    resultEl.style.display = 'block';
+    resultEl.style.background = 'var(--gray-100)';
+    resultEl.style.color = 'var(--gray-600)';
+    resultEl.textContent = '正在验证...';
+
+    Sync.validateToken(token).then(function(res) {
+      if (res.valid) {
+        Sync.setToken(token);
+        resultEl.style.background = 'var(--green-light)';
+        resultEl.style.color = 'var(--green)';
+        resultEl.textContent = '验证成功！用户：' + res.username;
+        setTimeout(function() { openSyncModal(); }, 1000);
+      } else {
+        resultEl.style.background = '#ffebee';
+        resultEl.style.color = '#c62828';
+        resultEl.textContent = 'Token 无效，请检查是否有 gist 权限';
+      }
+    });
+  }
+
+  function clearSyncToken() {
+    Sync.clearToken();
+    openSyncModal();
+  }
+
+  function saveOpenAIKey() {
+    var input = document.getElementById('openai-key-input');
+    var key = (input && input.value || '').trim();
+    if (!key) return;
+    localStorage.setItem('plants_openai_key', key);
+    openSyncModal();
+  }
+
+  function clearOpenAIKey() {
+    localStorage.removeItem('plants_openai_key');
+    openSyncModal();
   }
 
   function doExport() {
@@ -446,6 +561,11 @@ var App = (function() {
     deleteFromDetail: deleteFromDetail,
     filterByTag: filterByTag,
     doExport: doExport,
-    doImport: doImport
+    doImport: doImport,
+    syncToCloud: syncToCloud,
+    saveSyncToken: saveSyncToken,
+    clearSyncToken: clearSyncToken,
+    saveOpenAIKey: saveOpenAIKey,
+    clearOpenAIKey: clearOpenAIKey
   };
 })();

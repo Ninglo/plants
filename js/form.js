@@ -1237,6 +1237,10 @@ var Form = (function() {
     html += '<button class="btn btn-primary btn-block" onclick="Form.downloadCard()">📷 保存卡片</button>';
     html += '<button class="btn btn-block" onclick="App.closeModal()">完成</button>';
     html += '</div>';
+    // AI 聊天入口（植物类型且有照片）
+    if (record.type === 'plant' && record.id && record.photoIds && record.photoIds.length > 0) {
+      html += '<button class="btn btn-block" style="margin-top:10px; border-color:var(--orange); color:var(--orange);" onclick="Chat.openChat(\'' + record.id + '\')">🤖 和AI聊聊这株植物</button>';
+    }
     html += '</div>';
 
     document.getElementById('modal-body').innerHTML = html;

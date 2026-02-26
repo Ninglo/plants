@@ -179,8 +179,8 @@ var Storage = (function() {
     });
   }
 
-  // 导出数据（异步，从 IndexedDB 取照片内嵌到 JSON 中）
-  function exportData() {
+  // 获取导出数据（异步，返回 JSON 字符串，含内嵌照片）
+  function getExportPayload() {
     var records = getAll();
     return PhotoDB.getAll().then(function(allPhotos) {
       var exportRecords = records.map(function(r) {
@@ -193,12 +193,17 @@ var Storage = (function() {
         return copy;
       });
 
-      var data = {
+      return JSON.stringify({
         version: 1,
         exportedAt: new Date().toISOString(),
         records: exportRecords
-      };
-      var json = JSON.stringify(data, null, 2);
+      });
+    });
+  }
+
+  // 导出数据（下载 JSON 文件）
+  function exportData() {
+    return getExportPayload().then(function(json) {
       var blob = new Blob([json], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
@@ -335,6 +340,7 @@ var Storage = (function() {
     getByTag: getByTag,
     getAllTags: getAllTags,
     getStats: getStats,
+    getExportPayload: getExportPayload,
     exportData: exportData,
     importData: importData,
     compressImage: compressImage,
