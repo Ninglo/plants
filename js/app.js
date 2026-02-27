@@ -407,16 +407,18 @@ var App = (function() {
     // ===== API 密钥区 =====
     html += '<div class="sync-divider"></div>';
     html += '<div class="sync-section">';
-    html += '<div class="sync-section-title">🔑 AI 对话密钥</div>';
-    var openaiKey = localStorage.getItem('plants_openai_key') || '';
-    if (openaiKey) {
+    html += '<div class="sync-section-title">🔑 AI 植物识别（免费）</div>';
+    html += '<div style="font-size:12px; color:var(--gray-400); margin-bottom:8px;">使用 Google Gemini API，免费无需付费</div>';
+    var geminiKey = localStorage.getItem('plants_gemini_key') || '';
+    if (geminiKey) {
       html += '<div class="sync-token-row">';
-      html += '<span class="sync-token-masked">sk-****' + openaiKey.slice(-4) + '</span>';
-      html += '<a href="javascript:void(0)" class="sync-clear-link" onclick="App.clearOpenAIKey()">清除</a>';
+      html += '<span class="sync-token-masked">AI****' + geminiKey.slice(-4) + '</span>';
+      html += '<a href="javascript:void(0)" class="sync-clear-link" onclick="App.clearGeminiKey()">清除</a>';
       html += '</div>';
     } else {
-      html += '<input type="text" class="sync-token-input" id="openai-key-input" placeholder="粘贴 OpenAI API Key (sk-...)">';
-      html += '<button class="btn btn-block" style="margin-top:8px;" onclick="App.saveOpenAIKey()">保存</button>';
+      html += '<input type="text" class="sync-token-input" id="gemini-key-input" placeholder="粘贴 Gemini API Key">';
+      html += '<div style="font-size:12px; color:var(--gray-400); margin-top:4px;"><a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--green);">点此免费获取 Key →</a></div>';
+      html += '<button class="btn btn-block" style="margin-top:8px;" onclick="App.saveGeminiKey()">保存</button>';
     }
     html += '</div>';
 
@@ -476,16 +478,16 @@ var App = (function() {
     openSyncModal();
   }
 
-  function saveOpenAIKey() {
-    var input = document.getElementById('openai-key-input');
+  function saveGeminiKey() {
+    var input = document.getElementById('gemini-key-input');
     var key = (input && input.value || '').trim();
     if (!key) return;
-    localStorage.setItem('plants_openai_key', key);
+    localStorage.setItem('plants_gemini_key', key);
     openSyncModal();
   }
 
-  function clearOpenAIKey() {
-    localStorage.removeItem('plants_openai_key');
+  function clearGeminiKey() {
+    localStorage.removeItem('plants_gemini_key');
     openSyncModal();
   }
 
@@ -566,7 +568,7 @@ var App = (function() {
     syncToCloud: syncToCloud,
     saveSyncToken: saveSyncToken,
     clearSyncToken: clearSyncToken,
-    saveOpenAIKey: saveOpenAIKey,
-    clearOpenAIKey: clearOpenAIKey
+    saveGeminiKey: saveGeminiKey,
+    clearGeminiKey: clearGeminiKey
   };
 })();

@@ -1,11 +1,12 @@
 var Chat = (function() {
   'use strict';
 
-  var API_URL = 'https://api.openai.com/v1/chat/completions';
-  var MODEL = 'gpt-4o';
-  var KEY_STORAGE = 'plants_openai_key';
+  var MODEL = 'gemini-2.5-flash';
+  var BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
+  var KEY_STORAGE = 'plants_gemini_key';
 
-  var messages = [];
+  var messages = []; // Gemini contents 格式
+  var systemPrompt = '';
   var currentRecordId = null;
   var isStreaming = false;
   var abortController = null;
@@ -46,26 +47,32 @@ var Chat = (function() {
       '用通俗易懂的语言，像朋友聊天一样自然。回答简洁，不要太长。';
   }
 
-  // 构建包含照片的初始消息
-  function buildInitialMessage(record, photos) {
-    var content = [];
+  // 构建 Gemini 格式的初始用户消息 parts
+  function buildInitialParts(record, photos) {
+    var parts = [];
     var name = record.name || '这株植物';
-    content.push({ type: 'text', text: '我刚观察了' + name + '，帮我看看这是什么植物？' });
+    parts.push({ text: '我刚观察了' + name + '，帮我看看这是什么植物？' });
 
     // 添加照片（最多3张）
     if (photos && photos.length > 0) {
       var maxPhotos = Math.min(photos.length, 3);
       for (var i = 0; i < maxPhotos; i++) {
         if (photos[i]) {
-          content.push({
-            type: 'image_url',
-            image_url: { url: photos[i], detail: 'low' }
-          });
+          // 从 data URL 提取 mime_type 和 base64 数据
+          var match = photos[i].match(/^data:([^;]+);base64,(.+)$/);
+          if (match) {
+            parts.push({
+              inline_data: {
+                mime_type: match[1],
+                data: match[2]
+              }
+            });
+          }
         }
       }
     }
 
-    return content;
+    return parts;
   }
 
   // 渲染聊天界面
@@ -99,10 +106,9 @@ var Chat = (function() {
   function openChat(recordId) {
     if (!hasKey()) {
       // 直接打开设置页面让用户填写 Key
-      App.openSyncModal ? App.openSyncModal() : alert('请先在设置中填写 OpenAI API Key');
-      // 滚动到 API 密钥区域
+      App.openSyncModal ? App.openSyncModal() : alert('请先在设置中填写 Gemini API Key');
       setTimeout(function() {
-        var keyInput = document.getElementById('openai-key-input');
+        var keyInput = document.getElementById('gemini-key-input');
         if (keyInput) { keyInput.focus(); keyInput.scrollIntoView({ behavior: 'smooth' }); }
       }, 300);
       return;
@@ -114,6 +120,7 @@ var Chat = (function() {
 
     // 重置状态
     messages = [];
+    systemPrompt = '';
     isStreaming = false;
 
     // 渲染 UI
@@ -140,13 +147,12 @@ var Chat = (function() {
   }
 
   function startChat(record, photos) {
-    // 构建消息
-    var systemPrompt = buildSystemPrompt(record);
-    var initialContent = buildInitialMessage(record, photos);
+    systemPrompt = buildSystemPrompt(record);
+    var initialParts = buildInitialParts(record, photos);
 
+    // Gemini contents 格式
     messages = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: initialContent }
+      { role: 'user', parts: initialParts }
     ];
 
     // 显示用户消息
@@ -158,6 +164,25 @@ var Chat = (function() {
     streamResponse();
   }
 
+  // 构建 Gemini 请求体
+  function buildRequestBody(msgs, includePhotos) {
+    var contents = msgs.map(function(msg, idx) {
+      if (!includePhotos && idx === 0 && msg.parts) {
+        // 去掉图片 parts，只保留 text
+        var textParts = msg.parts.filter(function(p) { return p.text !== undefined; });
+        return { role: msg.role, parts: textParts };
+      }
+      return msg;
+    });
+
+    return {
+      systemInstruction: {
+        parts: [{ text: systemPrompt }]
+      },
+      contents: contents
+    };
+  }
+
   // 流式请求 AI 响应
   function streamResponse() {
     if (isStreaming) return;
@@ -167,7 +192,7 @@ var Chat = (function() {
     if (sendBtn) sendBtn.disabled = true;
 
     // 创建 AI 气泡
-    var bubble = appendMessage('assistant', '');
+    var bubble = appendMessage('model', '');
     if (bubble) {
       var cursor = document.createElement('span');
       cursor.className = 'chat-typing-cursor';
@@ -177,31 +202,18 @@ var Chat = (function() {
     abortController = new AbortController();
     var fullText = '';
 
-    // 构建请求消息（后续消息不重复发图片）
-    var apiMessages = messages.map(function(msg, idx) {
-      if (idx === 1 && Array.isArray(msg.content)) {
-        // 只保留第一次的图片
-        return msg;
-      }
-      return msg;
-    });
+    var url = BASE_URL + MODEL + ':streamGenerateContent?alt=sse&key=' + getKey();
 
-    fetch(API_URL, {
+    fetch(url, {
       method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + getKey(),
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: apiMessages,
-        stream: true
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildRequestBody(messages, true)),
       signal: abortController.signal
     }).then(function(response) {
       if (!response.ok) {
         return response.json().then(function(err) {
-          throw new Error(err.error && err.error.message || 'API 请求失败 (' + response.status + ')');
+          var errMsg = (err.error && err.error.message) || 'API 请求失败 (' + response.status + ')';
+          throw new Error(errMsg);
         });
       }
 
@@ -230,18 +242,23 @@ var Chat = (function() {
             }
             try {
               var parsed = JSON.parse(data);
-              var delta = parsed.choices && parsed.choices[0] && parsed.choices[0].delta;
-              if (delta && delta.content) {
-                fullText += delta.content;
-                if (bubble) {
-                  // 移除光标，更新文本，重新添加光标
-                  var cursorEl = bubble.querySelector('.chat-typing-cursor');
-                  bubble.textContent = fullText;
-                  if (cursorEl) bubble.appendChild(cursorEl);
+              // Gemini SSE 格式: candidates[0].content.parts[0].text
+              var parts = parsed.candidates && parsed.candidates[0] &&
+                parsed.candidates[0].content && parsed.candidates[0].content.parts;
+              if (parts) {
+                for (var j = 0; j < parts.length; j++) {
+                  if (parts[j].text) {
+                    fullText += parts[j].text;
+                  }
                 }
-                var container = document.getElementById('chat-messages');
-                if (container) container.scrollTop = container.scrollHeight;
               }
+              if (bubble) {
+                var cursorEl = bubble.querySelector('.chat-typing-cursor');
+                bubble.textContent = fullText;
+                if (cursorEl) bubble.appendChild(cursorEl);
+              }
+              var container = document.getElementById('chat-messages');
+              if (container) container.scrollTop = container.scrollHeight;
             } catch (e) { /* skip parse errors */ }
           }
 
@@ -256,15 +273,13 @@ var Chat = (function() {
       readChunk();
     }).catch(function(err) {
       isStreaming = false;
-      var sendBtn = document.getElementById('chat-send-btn');
-      if (sendBtn) sendBtn.disabled = false;
+      var sendBtn2 = document.getElementById('chat-send-btn');
+      if (sendBtn2) sendBtn2.disabled = false;
 
       if (err.name === 'AbortError') return;
 
       // 显示错误
-      if (bubble) {
-        bubble.textContent = '';
-      }
+      if (bubble) bubble.textContent = '';
       var container = document.getElementById('chat-messages');
       if (container) {
         var errDiv = document.createElement('div');
@@ -287,9 +302,9 @@ var Chat = (function() {
       if (cursor) cursor.remove();
     }
 
-    // 保存 AI 消息
+    // 保存 AI 消息（Gemini 用 "model" 角色）
     if (text) {
-      messages.push({ role: 'assistant', content: text });
+      messages.push({ role: 'model', parts: [{ text: text }] });
     }
   }
 
@@ -302,7 +317,7 @@ var Chat = (function() {
     if (!text) return;
 
     input.value = '';
-    messages.push({ role: 'user', content: text });
+    messages.push({ role: 'user', parts: [{ text: text }] });
     appendMessage('user', text);
     streamResponse();
   }
@@ -310,7 +325,7 @@ var Chat = (function() {
   // 确认整理 - 提取结构化数据
   function extractAndApply() {
     if (isStreaming) return;
-    if (messages.length < 3) {
+    if (messages.length < 2) {
       alert('请先和 AI 聊几轮再整理');
       return;
     }
@@ -319,15 +334,15 @@ var Chat = (function() {
       '请严格以 JSON 格式回复，只输出 JSON，不要其他文字。字段如下（不确定的留空字符串）：\n' +
       '{"name": "中文名", "latinName": "拉丁学名", "family": "科名", "genus": "属名", "features": "主要特征（一两句话）", "notes": "有趣的知识点（一两句话）"}';
 
-    messages.push({ role: 'user', content: extractPrompt });
+    messages.push({ role: 'user', parts: [{ text: extractPrompt }] });
     appendMessage('user', '✨ 请帮我整理植物信息...');
 
-    // 流式请求但我们需要收集完整响应来解析 JSON
+    // 流式请求
     isStreaming = true;
     var sendBtn = document.getElementById('chat-send-btn');
     if (sendBtn) sendBtn.disabled = true;
 
-    var bubble = appendMessage('assistant', '');
+    var bubble = appendMessage('model', '');
     if (bubble) {
       var cursor = document.createElement('span');
       cursor.className = 'chat-typing-cursor';
@@ -337,29 +352,17 @@ var Chat = (function() {
     abortController = new AbortController();
     var fullText = '';
 
-    fetch(API_URL, {
+    var url = BASE_URL + MODEL + ':streamGenerateContent?alt=sse&key=' + getKey();
+
+    fetch(url, {
       method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + getKey(),
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: messages.map(function(msg) {
-          // 去掉图片减少 token
-          if (Array.isArray(msg.content)) {
-            var textOnly = msg.content.filter(function(c) { return c.type === 'text'; });
-            return { role: msg.role, content: textOnly.length === 1 ? textOnly[0].text : textOnly };
-          }
-          return msg;
-        }),
-        stream: true
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildRequestBody(messages, false)),
       signal: abortController.signal
     }).then(function(response) {
       if (!response.ok) {
         return response.json().then(function(err) {
-          throw new Error(err.error && err.error.message || 'API 请求失败');
+          throw new Error((err.error && err.error.message) || 'API 请求失败');
         });
       }
 
@@ -388,17 +391,20 @@ var Chat = (function() {
             }
             try {
               var parsed = JSON.parse(data);
-              var delta = parsed.choices && parsed.choices[0] && parsed.choices[0].delta;
-              if (delta && delta.content) {
-                fullText += delta.content;
-                if (bubble) {
-                  var cursorEl = bubble.querySelector('.chat-typing-cursor');
-                  bubble.textContent = fullText;
-                  if (cursorEl) bubble.appendChild(cursorEl);
+              var parts = parsed.candidates && parsed.candidates[0] &&
+                parsed.candidates[0].content && parsed.candidates[0].content.parts;
+              if (parts) {
+                for (var j = 0; j < parts.length; j++) {
+                  if (parts[j].text) fullText += parts[j].text;
                 }
-                var container = document.getElementById('chat-messages');
-                if (container) container.scrollTop = container.scrollHeight;
               }
+              if (bubble) {
+                var cursorEl = bubble.querySelector('.chat-typing-cursor');
+                bubble.textContent = fullText;
+                if (cursorEl) bubble.appendChild(cursorEl);
+              }
+              var container = document.getElementById('chat-messages');
+              if (container) container.scrollTop = container.scrollHeight;
             } catch (e) {}
           }
           readChunk();
@@ -432,11 +438,10 @@ var Chat = (function() {
       if (cursor) cursor.remove();
     }
 
-    messages.push({ role: 'assistant', content: text });
+    messages.push({ role: 'model', parts: [{ text: text }] });
 
     // 尝试解析 JSON
     var jsonStr = text;
-    // 处理 markdown 代码块包裹
     var match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (match) jsonStr = match[1].trim();
 
@@ -444,7 +449,6 @@ var Chat = (function() {
       var extracted = JSON.parse(jsonStr);
       showExtractConfirmation(extracted);
     } catch (e) {
-      // JSON 解析失败，尝试提取
       var match2 = text.match(/\{[\s\S]*\}/);
       if (match2) {
         try {
@@ -494,7 +498,6 @@ var Chat = (function() {
     html += '</div>';
     html += '</div>';
 
-    // 保存提取数据供确认时使用
     Chat._pendingExtract = data;
 
     var div = document.createElement('div');
