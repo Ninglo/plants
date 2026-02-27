@@ -274,7 +274,7 @@ var Storage = (function() {
         };
       });
     } catch (e) {
-      return Promise.resolve({ success: false, message: '导入失败：文件格式错误' });
+      return Promise.resolve({ success: false, message: '导入失败：' + (e.message || '文件格式错误') });
     }
   }
 

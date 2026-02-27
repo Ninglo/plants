@@ -9,8 +9,20 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>野径手记</title>
+  <script>
+    // 自动检测新版本：即使 index.html 被缓存，也能发现更新并刷新
+    (function() {
+      var LOCAL_VER = 27;
+      fetch('version.txt?_=' + Date.now()).then(function(r) {
+        return r.text();
+      }).then(function(v) {
+        var remote = parseInt(v.trim());
+        if (remote > LOCAL_VER) location.reload(true);
+      }).catch(function() {});
+    })();
+  </script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap">
-  <link rel="stylesheet" href="css/style.css?v=26">
+  <link rel="stylesheet" href="css/style.css?v=27">
 </head>
 <body>
   <!-- 顶部栏 -->
@@ -91,17 +103,17 @@
   </div>
 
   <!-- JS 文件按依赖顺序加载 -->
-  <script src="js/photodb.js?v=26"></script>
-  <script src="js/storage.js?v=26"></script>
-  <script src="js/sync.js?v=26"></script>
-  <script src="js/recommend.js?v=26"></script>
-  <script src="js/form.js?v=26"></script>
-  <script src="js/inbox.js?v=26"></script>
-  <script src="js/timeline.js?v=26"></script>
-  <script src="js/cards.js?v=26"></script>
-  <script src="js/knowledge.js?v=26"></script>
-  <script src="js/graph.js?v=26"></script>
-  <script src="js/chat.js?v=26"></script>
-  <script src="js/app.js?v=26"></script>
+  <script src="js/photodb.js?v=27"></script>
+  <script src="js/storage.js?v=27"></script>
+  <script src="js/sync.js?v=27"></script>
+  <script src="js/recommend.js?v=27"></script>
+  <script src="js/form.js?v=27"></script>
+  <script src="js/inbox.js?v=27"></script>
+  <script src="js/timeline.js?v=27"></script>
+  <script src="js/cards.js?v=27"></script>
+  <script src="js/knowledge.js?v=27"></script>
+  <script src="js/graph.js?v=27"></script>
+  <script src="js/chat.js?v=27"></script>
+  <script src="js/app.js?v=27"></script>
 </body>
 </html>
