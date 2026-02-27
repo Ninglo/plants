@@ -49,7 +49,9 @@ var Sync = (function() {
   function findExistingGist() {
     return fetch(API_BASE + '/gists?per_page=100', { headers: headers() })
       .then(function(res) {
-        if (!res.ok) return null;
+        if (res.status === 401) throw new Error('Token 无效或已过期，请重新设置');
+        if (res.status === 403) throw new Error('Token 没有 gist 权限，请重新生成（勾选 gist scope）');
+        if (!res.ok) throw new Error('查询 Gist 失败 (' + res.status + ')');
         return res.json();
       })
       .then(function(gists) {
@@ -61,7 +63,10 @@ var Sync = (function() {
         }
         return null;
       })
-      .catch(function() { return null; });
+      .catch(function(err) {
+        if (err.message && err.message.indexOf('Token') >= 0) throw err;
+        throw new Error('无法连接 GitHub：' + (err.message || '网络错误'));
+      });
   }
 
   // 创建新 gist
@@ -73,6 +78,8 @@ var Sync = (function() {
       headers: headers(),
       body: JSON.stringify({ description: GIST_DESC, public: false, files: files })
     }).then(function(res) {
+      if (res.status === 401) throw new Error('Token 无效或已过期，请重新设置');
+      if (res.status === 403) throw new Error('Token 没有 gist 权限，请重新生成（勾选 gist scope）');
       if (!res.ok) throw new Error('创建 Gist 失败 (' + res.status + ')');
       return res.json();
     }).then(function(data) {
