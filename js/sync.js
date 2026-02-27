@@ -88,12 +88,11 @@ var Sync = (function() {
     });
   }
 
-  // 读取 gist 内容
+  // 读取 gist 内容（处理大文件截断）
   function readGist(gistId) {
     return fetch(API_BASE + '/gists/' + gistId, { headers: headers() })
       .then(function(res) {
         if (res.status === 404) {
-          // gist 被删除了，清除本地 ID
           localStorage.removeItem(GIST_ID_KEY);
           return null;
         }
@@ -102,7 +101,13 @@ var Sync = (function() {
       })
       .then(function(data) {
         if (!data || !data.files || !data.files[GIST_FILE]) return null;
-        return data.files[GIST_FILE].content;
+        var file = data.files[GIST_FILE];
+        // GitHub API 会截断超过 1MB 的文件，需要用 raw_url 重新下载
+        if (file.truncated && file.raw_url) {
+          return fetch(file.raw_url, { headers: headers() })
+            .then(function(r) { return r.text(); });
+        }
+        return file.content;
       });
   }
 

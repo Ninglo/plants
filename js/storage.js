@@ -180,30 +180,34 @@ var Storage = (function() {
   }
 
   // 获取导出数据（异步，返回 JSON 字符串，含内嵌照片）
-  function getExportPayload() {
+  function getExportPayload(includePhotos) {
     var records = getAll();
-    return PhotoDB.getAll().then(function(allPhotos) {
-      var exportRecords = records.map(function(r) {
-        var copy = Object.assign({}, r);
-        if (copy.photoIds && copy.photoIds.length > 0) {
-          copy.photos = copy.photoIds.map(function(pid) {
-            return allPhotos[pid] || '';
-          }).filter(Boolean);
-        }
-        return copy;
+    if (includePhotos) {
+      return PhotoDB.getAll().then(function(allPhotos) {
+        var exportRecords = records.map(function(r) {
+          var copy = Object.assign({}, r);
+          if (copy.photoIds && copy.photoIds.length > 0) {
+            copy.photos = copy.photoIds.map(function(pid) {
+              return allPhotos[pid] || '';
+            }).filter(Boolean);
+          }
+          return copy;
+        });
+        return JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), records: exportRecords });
       });
-
-      return JSON.stringify({
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        records: exportRecords
-      });
+    }
+    // 云端同步：不含照片，保持体积小（照片留在本地 IndexedDB）
+    var exportRecords = records.map(function(r) {
+      var copy = Object.assign({}, r);
+      delete copy.photos; // 确保不带照片数据
+      return copy;
     });
+    return Promise.resolve(JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), records: exportRecords }));
   }
 
-  // 导出数据（下载 JSON 文件）
+  // 导出数据（下载 JSON 文件，含照片）
   function exportData() {
-    return getExportPayload().then(function(json) {
+    return getExportPayload(true).then(function(json) {
       var blob = new Blob([json], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
