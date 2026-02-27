@@ -125,7 +125,7 @@ var Chat = (function() {
 
     // 渲染 UI
     document.getElementById('modal-body').innerHTML = renderChatUI();
-    document.getElementById('modal-title').textContent = '🤖 聊聊 ' + (record.name || '这株植物');
+    document.getElementById('modal-title').textContent = '📋 关于「' + (record.name || '这株植物') + '」';
 
     // 确保 modal 打开
     var overlay = document.getElementById('modal-overlay');
@@ -137,8 +137,9 @@ var Chat = (function() {
     // 加载照片并开始对话
     var photoIds = record.photoIds || [];
     if (photoIds.length > 0) {
-      PhotoDB.getMultiple(photoIds).then(function(photoMap) {
-        var photos = photoIds.map(function(pid) { return photoMap[pid]; }).filter(Boolean);
+      PhotoDB.getMultiple(photoIds).then(function(results) {
+        // getMultiple 返回 [{id, data}] 数组，提取 data
+        var photos = results.map(function(r) { return r && r.data; }).filter(Boolean);
         startChat(record, photos);
       });
     } else {
