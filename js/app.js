@@ -562,6 +562,7 @@ var App = (function() {
     filterByTag: filterByTag,
     doExport: doExport,
     doImport: doImport,
+    openSyncModal: openSyncModal,
     syncToCloud: syncToCloud,
     saveSyncToken: saveSyncToken,
     clearSyncToken: clearSyncToken,

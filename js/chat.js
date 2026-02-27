@@ -98,7 +98,13 @@ var Chat = (function() {
   // 打开聊天
   function openChat(recordId) {
     if (!hasKey()) {
-      alert('请先在设置中填写 OpenAI API Key');
+      // 直接打开设置页面让用户填写 Key
+      App.openSyncModal ? App.openSyncModal() : alert('请先在设置中填写 OpenAI API Key');
+      // 滚动到 API 密钥区域
+      setTimeout(function() {
+        var keyInput = document.getElementById('openai-key-input');
+        if (keyInput) { keyInput.focus(); keyInput.scrollIntoView({ behavior: 'smooth' }); }
+      }, 300);
       return;
     }
 
@@ -517,14 +523,20 @@ var Chat = (function() {
     Storage.update(currentRecordId, updates);
     Chat._pendingExtract = null;
 
-    // 显示成功
+    // 显示成功 + 完成按钮
     var container = document.getElementById('chat-messages');
     if (container) {
-      var msg = document.createElement('div');
-      msg.className = 'chat-bubble chat-bubble-ai';
-      msg.style.background = 'var(--green-light)';
-      msg.textContent = '已补全！' + (updates.status === 'complete' ? '记录已升级为「已收录」状态。' : '');
-      container.appendChild(msg);
+      var successHtml = '<div style="text-align:center; padding:16px 0;">';
+      successHtml += '<div style="font-size:32px; margin-bottom:8px;">✅</div>';
+      successHtml += '<div style="font-weight:600; font-size:15px; color:var(--green);">信息已补全！</div>';
+      if (updates.status === 'complete') {
+        successHtml += '<div style="font-size:13px; color:var(--gray-400); margin-top:4px;">记录已升级为「已收录」状态</div>';
+      }
+      successHtml += '<button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="App.closeModal()">完成</button>';
+      successHtml += '</div>';
+      var div = document.createElement('div');
+      div.innerHTML = successHtml;
+      container.appendChild(div.firstChild);
       container.scrollTop = container.scrollHeight;
     }
 

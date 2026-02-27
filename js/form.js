@@ -1223,10 +1223,16 @@ var Form = (function() {
     html += '<div class="celebration-icon">' + typeIcon + '</div>';
     html += '<div class="celebration-title">' + celebTitle + '</div>';
     html += '<div class="celebration-subtitle">' + escapeHtml(name) + '</div>';
-    if (celebHint) {
+    if (celebHint && !(record.photoIds && record.photoIds.length > 0)) {
       html += '<div style="font-size:13px; color:var(--gray-400); margin-top:4px;">' + celebHint + '</div>';
     }
     html += '</div>';
+
+    // AI 聊天入口（植物类型且有照片）— 放在最显眼的位置
+    if (record.type === 'plant' && record.id && record.photoIds && record.photoIds.length > 0) {
+      html += '<button class="btn btn-primary btn-block" style="margin-top:14px; background:linear-gradient(135deg, #e0a060, #d4883a); border:none;" onclick="Chat.openChat(\'' + record.id + '\')">🤖 和AI聊聊这株植物</button>';
+      html += '<div style="font-size:12px; color:var(--gray-400); margin-top:4px; text-align:center;">AI帮你识别植物、补全科属信息</div>';
+    }
 
     // 卡片预览（Canvas 绘制）
     html += '<canvas id="share-card-canvas" width="540" height="720" style="display:none;"></canvas>';
@@ -1237,10 +1243,6 @@ var Form = (function() {
     html += '<button class="btn btn-primary btn-block" onclick="Form.downloadCard()">📷 保存卡片</button>';
     html += '<button class="btn btn-block" onclick="App.closeModal()">完成</button>';
     html += '</div>';
-    // AI 聊天入口（植物类型且有照片）
-    if (record.type === 'plant' && record.id && record.photoIds && record.photoIds.length > 0) {
-      html += '<button class="btn btn-block" style="margin-top:10px; border-color:var(--orange); color:var(--orange);" onclick="Chat.openChat(\'' + record.id + '\')">🤖 和AI聊聊这株植物</button>';
-    }
     html += '</div>';
 
     document.getElementById('modal-body').innerHTML = html;
@@ -1531,6 +1533,13 @@ var Form = (function() {
     setType: setType,
     togglePasteArea: togglePasteArea,
     applyPaste: applyPaste,
-    downloadCard: downloadCard
+    downloadCard: downloadCard,
+    OBS_BASE: OBS_BASE,
+    OBS_LEAF: OBS_LEAF,
+    OBS_FLOWER: OBS_FLOWER,
+    OBS_FRUIT: OBS_FRUIT,
+    getAllObsFields: getAllObsFields,
+    getChipVal: getChipVal,
+    showCelebration: showCelebration
   };
 })();
