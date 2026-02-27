@@ -212,31 +212,72 @@ var Form = (function() {
 
   // 语音识别
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var activeRecognition = null; // 当前正在进行的语音识别实例
 
   function startVoiceInput(targetInput) {
     if (!SpeechRecognition) {
       alert('你的浏览器不支持语音输入，请使用 Safari 或 Chrome');
       return;
     }
+
+    var btn = targetInput.parentElement.querySelector('.btn-voice');
+
+    // 如果正在录音，点击停止
+    if (activeRecognition) {
+      activeRecognition.stop();
+      activeRecognition = null;
+      btn.classList.remove('recording');
+      return;
+    }
+
     var recognition = new SpeechRecognition();
     recognition.lang = 'zh-CN';
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true; // 显示中间结果
+    activeRecognition = recognition;
 
-    var btn = targetInput.parentElement.querySelector('.btn-voice');
     btn.classList.add('recording');
 
-    recognition.onresult = function(event) {
-      var text = event.results[0][0].transcript;
-      if (targetInput.tagName === 'TEXTAREA') {
-        targetInput.value += (targetInput.value ? '\n' : '') + text;
-      } else {
-        targetInput.value = text;
+    // 超时保护：10秒自动停止
+    var timeout = setTimeout(function() {
+      if (activeRecognition === recognition) {
+        recognition.stop();
       }
-      btn.classList.remove('recording');
+    }, 10000);
+
+    recognition.onresult = function(event) {
+      var transcript = '';
+      for (var i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      if (event.results[0].isFinal) {
+        if (targetInput.tagName === 'TEXTAREA') {
+          targetInput.value += (targetInput.value ? '\n' : '') + transcript;
+        } else {
+          targetInput.value = transcript;
+        }
+      } else {
+        // 临时结果：显示在 placeholder 里
+        targetInput.placeholder = transcript + '...';
+      }
     };
-    recognition.onerror = function() { btn.classList.remove('recording'); };
-    recognition.onend = function() { btn.classList.remove('recording'); };
+    recognition.onerror = function(e) {
+      clearTimeout(timeout);
+      activeRecognition = null;
+      btn.classList.remove('recording');
+      if (e.error === 'not-allowed') {
+        alert('请允许麦克风权限');
+      }
+    };
+    recognition.onend = function() {
+      clearTimeout(timeout);
+      activeRecognition = null;
+      btn.classList.remove('recording');
+      // 恢复 placeholder
+      targetInput.placeholder = targetInput.getAttribute('data-placeholder') || '';
+    };
+    // 保存原始 placeholder
+    targetInput.setAttribute('data-placeholder', targetInput.placeholder);
     recognition.start();
   }
 
@@ -1195,13 +1236,7 @@ var Form = (function() {
 
   function showCelebration(record) {
     var name = record.name || record.title || '未命名';
-    var typeIcon = record.type === 'plant' ? '🌿' : record.type === 'knowledge' ? '📖' : '🔍';
     var isObserved = record.status === 'observed';
-
-    // 根据状态区分标题和提示
-    var celebTitle = isObserved ? '观察完成！' : '收录完成！';
-    var modalTitle = isObserved ? '👀 观察记录已保存' : '🎉 太棒了！';
-    var celebHint = isObserved ? '回头查查资料再来补充吧' : '';
 
     // 生成彩纸碎片
     var confettiHtml = '';
@@ -1219,18 +1254,15 @@ var Form = (function() {
 
     var html = '<div class="celebration-wrap">';
     html += '<div class="confetti-container">' + confettiHtml + '</div>';
-    html += '<div class="celebration-content">';
-    html += '<div class="celebration-icon">' + typeIcon + '</div>';
-    html += '<div class="celebration-title">' + celebTitle + '</div>';
+    html += '<div class="celebration-content" style="padding-top:8px;">';
+    html += '<div style="font-size:36px; margin-bottom:4px;">' + (isObserved ? '👀' : '🎉') + '</div>';
+    html += '<div class="celebration-title">' + (isObserved ? '观察已记录' : '收录完成！') + '</div>';
     html += '<div class="celebration-subtitle">' + escapeHtml(name) + '</div>';
-    if (celebHint && !(record.photoIds && record.photoIds.length > 0)) {
-      html += '<div style="font-size:13px; color:var(--gray-400); margin-top:4px;">' + celebHint + '</div>';
-    }
     html += '</div>';
 
-    // AI 聊天入口（植物类型且有照片）— 放在最显眼的位置
+    // AI 聊天入口（植物类型且有照片）— fallback，正常流程不经过这里
     if (record.type === 'plant' && record.id && record.photoIds && record.photoIds.length > 0) {
-      html += '<button class="btn btn-primary btn-block" style="margin-top:14px; background:linear-gradient(135deg, #e0a060, #d4883a); border:none;" onclick="Chat.openChat(\'' + record.id + '\')">🤖 和AI聊聊这株植物</button>';
+      html += '<button class="btn btn-primary btn-block" style="margin-top:12px; background:linear-gradient(135deg, #e0a060, #d4883a); border:none;" onclick="Chat.openChat(\'' + record.id + '\')">🤖 和AI聊聊这株植物</button>';
       html += '<div style="font-size:12px; color:var(--gray-400); margin-top:4px; text-align:center;">AI帮你识别植物、补全科属信息</div>';
     }
 
@@ -1239,14 +1271,14 @@ var Form = (function() {
     html += '<div class="share-card-preview" id="share-card-preview" style="margin-top:12px;"></div>';
 
     // 按钮
-    html += '<div style="display:flex; gap:10px; margin-top:16px;">';
+    html += '<div style="display:flex; gap:10px; margin-top:14px;">';
     html += '<button class="btn btn-primary btn-block" onclick="Form.downloadCard()">📷 保存卡片</button>';
     html += '<button class="btn btn-block" onclick="App.closeModal()">完成</button>';
     html += '</div>';
     html += '</div>';
 
     document.getElementById('modal-body').innerHTML = html;
-    document.getElementById('modal-title').textContent = modalTitle;
+    document.getElementById('modal-title').textContent = '';
 
     // 绘制分享卡片
     setTimeout(function() { drawShareCard(record); }, 100);

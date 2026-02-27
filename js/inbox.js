@@ -1,17 +1,17 @@
 /* ========== 快速拍照 & 待处理队列 ========== */
 var Inbox = (function() {
 
-  var quickPhotoData = null;
+  var quickPhotos = []; // [{id, data}]
   var quickObsParts = []; // 选中的观察部位
 
   // 打开快速拍照
   function openQuickPhoto() {
-    quickPhotoData = null;
+    quickPhotos = [];
     quickObsParts = [];
 
     var html = '';
-    // 拍照区
-    html += '<div style="text-align:center; margin-bottom:16px;">';
+    // 拍照区 — 大按钮（拍第一张前）
+    html += '<div id="quick-photo-initial" style="text-align:center; margin-bottom:16px;">';
     html += '<label style="cursor:pointer;">';
     html += '<input type="file" accept="image/*" capture="environment" style="display:none" id="quick-photo-input" onchange="Inbox.onPhotoSelected(this.files)">';
     html += '<div class="photo-add" style="width:100%; height:200px; font-size:16px; flex-direction:column; gap:8px; display:flex; align-items:center; justify-content:center;">';
@@ -20,7 +20,14 @@ var Inbox = (function() {
     html += '</div>';
     html += '</label>';
     html += '</div>';
-    html += '<img id="quick-photo-preview" class="quick-photo-preview" style="display:none">';
+    // 已拍照片预览区 + 追加按钮（拍照后显示）
+    html += '<div id="quick-photo-list" style="display:none; margin-bottom:16px;">';
+    html += '<div id="quick-photo-thumbs" style="display:flex; gap:8px; flex-wrap:wrap;"></div>';
+    html += '<label style="cursor:pointer; display:inline-block; margin-top:8px;">';
+    html += '<input type="file" accept="image/*" capture="environment" style="display:none" onchange="Inbox.onPhotoSelected(this.files)">';
+    html += '<div class="photo-add" style="width:64px; height:64px; font-size:22px; display:flex; align-items:center; justify-content:center; border-radius:10px;">＋</div>';
+    html += '</label>';
+    html += '</div>';
 
     // 名称
     html += '<div class="form-group">';
@@ -46,6 +53,28 @@ var Inbox = (function() {
   // 渲染观察字段
   function renderObsSection() {
     var html = '';
+    // 📍 位置和日期信息栏
+    var today = new Date();
+    var dateStr = today.getFullYear() + '/' + (today.getMonth() + 1) + '/' + today.getDate();
+    html += '<div class="form-section" style="margin-top:14px;">';
+    html += '<div class="form-section-header"><span class="form-step-badge">📍</span> <b>时间地点</b></div>';
+    html += '<div style="display:flex; gap:10px; margin-bottom:14px;">';
+    html += '<div style="flex:1;">';
+    html += '<label class="form-label" style="font-size:12px; margin-bottom:4px;">日期</label>';
+    html += '<div id="quick-date" style="font-size:14px; color:var(--text-primary); padding:8px 10px; background:var(--bg-card); border:1px solid var(--border); border-radius:8px;">' + dateStr + '</div>';
+    html += '</div>';
+    html += '<div style="flex:2;">';
+    html += '<label class="form-label" style="font-size:12px; margin-bottom:4px;">位置</label>';
+    html += '<div style="display:flex; gap:6px;">';
+    html += '<input type="text" class="form-input" id="quick-location" placeholder="获取中..." style="flex:1; font-size:13px;" readonly>';
+    html += '<button type="button" class="btn-icon" id="btn-relocate" onclick="Inbox.getLocation()" title="重新定位" style="flex-shrink:0; width:36px; height:36px;">';
+    html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>';
+    html += '</button>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+
     html += '<div class="form-section" style="margin-top:14px;">';
     html += '<div class="form-section-header"><span class="form-step-badge">观察</span> <b>我的观察</b></div>';
     html += '<div style="font-size:13px; color:var(--gray-400); margin-bottom:12px;">不需要专业知识，选一选就好</div>';
@@ -130,18 +159,106 @@ var Inbox = (function() {
   function onPhotoSelected(files) {
     if (!files || !files[0]) return;
     Storage.compressImage(files[0]).then(function(dataUrl) {
-      quickPhotoData = dataUrl;
-      var preview = document.getElementById('quick-photo-preview');
-      preview.src = dataUrl;
-      preview.style.display = 'block';
-      // 显示观察区
+      var photoId = 'photo_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+      quickPhotos.push({ id: photoId, data: dataUrl });
+
+      // 隐藏大按钮，显示缩略图列表
+      var initial = document.getElementById('quick-photo-initial');
+      if (initial) initial.style.display = 'none';
+      var list = document.getElementById('quick-photo-list');
+      if (list) list.style.display = 'block';
+
+      // 添加缩略图
+      var thumbs = document.getElementById('quick-photo-thumbs');
+      if (thumbs) {
+        var thumb = document.createElement('div');
+        thumb.style.cssText = 'position:relative; width:64px; height:64px; border-radius:10px; overflow:hidden; flex-shrink:0;';
+        thumb.innerHTML = '<img src="' + dataUrl + '" style="width:100%; height:100%; object-fit:cover;">' +
+          '<button type="button" onclick="Inbox.removePhoto(' + (quickPhotos.length - 1) + ')" style="position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; background:rgba(0,0,0,0.5); color:#fff; border:none; font-size:12px; line-height:20px; text-align:center; cursor:pointer;">✕</button>';
+        thumbs.appendChild(thumb);
+      }
+
+      // 显示观察区 + 首次自动定位
       var obsSection = document.getElementById('quick-obs-section');
-      if (obsSection) obsSection.style.display = 'block';
+      if (obsSection && obsSection.style.display === 'none') {
+        obsSection.style.display = 'block';
+        getLocation(); // 首次显示时自动定位
+      }
       // 更新按钮
       var btn = document.getElementById('quick-save-btn');
       btn.disabled = false;
       btn.textContent = '保存观察';
     });
+  }
+
+  // GPS 定位
+  function getLocation() {
+    var locInput = document.getElementById('quick-location');
+    if (!locInput) return;
+    if (!navigator.geolocation) {
+      locInput.value = '';
+      locInput.placeholder = '浏览器不支持定位';
+      locInput.removeAttribute('readonly');
+      return;
+    }
+    locInput.value = '';
+    locInput.placeholder = '定位中...';
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        var lat = pos.coords.latitude.toFixed(5);
+        var lng = pos.coords.longitude.toFixed(5);
+        // 尝试反向地理编码（用免费的 Nominatim）
+        fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&zoom=16&accept-language=zh')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data && data.display_name) {
+              // 简化地址：取最后几级
+              var parts = data.display_name.split(',').map(function(s) { return s.trim(); });
+              // 取有意义的部分（去掉国家、邮编等）
+              var short = parts.slice(0, 3).reverse().join(' ');
+              locInput.value = short;
+            } else {
+              locInput.value = lat + ', ' + lng;
+            }
+            locInput.removeAttribute('readonly');
+          })
+          .catch(function() {
+            locInput.value = lat + ', ' + lng;
+            locInput.removeAttribute('readonly');
+          });
+      },
+      function(err) {
+        locInput.placeholder = '定位失败，可手动输入';
+        locInput.removeAttribute('readonly');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }
+
+  function removePhoto(index) {
+    quickPhotos.splice(index, 1);
+    // 重建缩略图
+    var thumbs = document.getElementById('quick-photo-thumbs');
+    if (thumbs) {
+      thumbs.innerHTML = '';
+      quickPhotos.forEach(function(p, i) {
+        var thumb = document.createElement('div');
+        thumb.style.cssText = 'position:relative; width:64px; height:64px; border-radius:10px; overflow:hidden; flex-shrink:0;';
+        thumb.innerHTML = '<img src="' + p.data + '" style="width:100%; height:100%; object-fit:cover;">' +
+          '<button type="button" onclick="Inbox.removePhoto(' + i + ')" style="position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; background:rgba(0,0,0,0.5); color:#fff; border:none; font-size:12px; line-height:20px; text-align:center; cursor:pointer;">✕</button>';
+        thumbs.appendChild(thumb);
+      });
+    }
+    // 如果删光了，恢复大按钮
+    if (quickPhotos.length === 0) {
+      var initial = document.getElementById('quick-photo-initial');
+      if (initial) initial.style.display = 'block';
+      var list = document.getElementById('quick-photo-list');
+      if (list) list.style.display = 'none';
+      var btn = document.getElementById('quick-save-btn');
+      btn.disabled = true;
+      btn.textContent = '拍照后开始观察';
+    }
   }
 
   function saveQuick() {
@@ -154,6 +271,12 @@ var Inbox = (function() {
     Form.getAllObsFields().forEach(function(field) {
       obsData[field.id] = Form.getChipVal(field.id);
     });
+
+    // 收集位置
+    var locInput = document.getElementById('quick-location');
+    if (locInput && locInput.value.trim()) {
+      obsData.location = locInput.value.trim();
+    }
 
     function doCreate(photoIds) {
       var record = {
@@ -169,7 +292,7 @@ var Inbox = (function() {
       Object.keys(obsData).forEach(function(k) { record[k] = obsData[k]; });
 
       var created = Storage.create(record);
-      quickPhotoData = null;
+      quickPhotos = [];
       quickObsParts = [];
       App.refreshView();
 
@@ -181,10 +304,13 @@ var Inbox = (function() {
       }
     }
 
-    if (quickPhotoData) {
-      var photoId = 'photo_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-      PhotoDB.save(photoId, quickPhotoData).then(function() {
-        doCreate([photoId]);
+    // 保存所有照片到 PhotoDB
+    if (quickPhotos.length > 0) {
+      var saves = quickPhotos.map(function(p) {
+        return PhotoDB.save(p.id, p.data);
+      });
+      Promise.all(saves).then(function() {
+        doCreate(quickPhotos.map(function(p) { return p.id; }));
       });
     } else {
       doCreate([]);
@@ -228,6 +354,8 @@ var Inbox = (function() {
   return {
     openQuickPhoto: openQuickPhoto,
     onPhotoSelected: onPhotoSelected,
+    removePhoto: removePhoto,
+    getLocation: getLocation,
     saveQuick: saveQuick,
     togglePart: togglePart,
     renderPendingList: renderPendingList
