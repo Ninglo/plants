@@ -1414,6 +1414,23 @@ img[data-photo-id] {
   background: #fff3e0;
   color: #e65100;
 }
+.btn-ai-mini {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1.5px solid #e0a060;
+  background: linear-gradient(135deg, #fff8f0, #fff3e0);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
+.btn-ai-mini:active {
+  transform: scale(0.92);
+}
 .badge-collected {
   display: inline-block;
   padding: 2px 8px;

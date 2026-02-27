@@ -137,7 +137,7 @@ var App = (function() {
 
     var html = '<div class="section-title">待补充 <span style="font-size:12px; color:var(--gray-400); font-weight:400;">' + observed.length + ' 条已观察</span></div>';
     observed.forEach(function(item) {
-      html += '<div class="knowledge-item observed-item" onclick="Form.openEdit(\'' + item.id + '\')">';
+      html += '<div class="knowledge-item observed-item" onclick="App.showDetail(\'' + item.id + '\')">';
       if (item.photoIds && item.photoIds[0]) {
         html += '<img style="width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0;" data-photo-id="' + item.photoIds[0] + '" src="' + Storage.BLANK_IMG + '">';
       } else {
@@ -147,7 +147,12 @@ var App = (function() {
       html += '<div style="font-size:14px; font-weight:500;">' + escapeHtml(item.name || '未命名') + '</div>';
       html += '<div style="font-size:12px; color:var(--gray-400);">' + formatDate(item.updatedAt) + '</div>';
       html += '</div>';
-      html += '<span class="badge-observed" style="flex-shrink:0;">已观察</span>';
+      // AI 识别按钮（有照片时直接进 AI）
+      if (item.photoIds && item.photoIds.length > 0 && Chat.hasKey()) {
+        html += '<button class="btn-ai-mini" onclick="event.stopPropagation(); Chat.openChat(\'' + item.id + '\')" title="AI识别">📋</button>';
+      } else {
+        html += '<span class="badge-observed" style="flex-shrink:0;">已观察</span>';
+      }
       html += '</div>';
     });
     return html;
@@ -306,14 +311,18 @@ var App = (function() {
 
     // 操作按钮
     html += '<div class="detail-actions">';
-    if (record.type === 'plant' && record.status === 'observed') {
+    // 已观察且有照片 → AI 按钮作为最醒目的主操作
+    if (record.type === 'plant' && record.status === 'observed' && record.photoIds && record.photoIds.length > 0) {
+      html += '<button class="btn btn-primary btn-block" style="background:linear-gradient(135deg, #e0a060, #d4883a); border:none;" onclick="Chat.openChat(\'' + record.id + '\')">📋 AI 识别补全</button>';
+      html += '<button class="btn btn-block" style="margin-top:8px;" onclick="Form.openEdit(\'' + record.id + '\')">手动补充信息</button>';
+    } else if (record.type === 'plant' && record.status === 'observed') {
       html += '<button class="btn btn-primary btn-block" onclick="Form.openEdit(\'' + record.id + '\')">补充专业信息</button>';
     } else {
       html += '<button class="btn btn-primary btn-block" onclick="Form.openEdit(\'' + record.id + '\')">编辑</button>';
-    }
-    // AI 聊天入口
-    if (record.type === 'plant' && record.photoIds && record.photoIds.length > 0) {
-      html += '<button class="btn btn-block" style="margin-top:8px; border-color:var(--orange); color:var(--orange);" onclick="Chat.openChat(\'' + record.id + '\')">🤖 和AI聊聊</button>';
+      // 已完成的植物也可以再聊
+      if (record.type === 'plant' && record.photoIds && record.photoIds.length > 0) {
+        html += '<button class="btn btn-block" style="margin-top:8px; border-color:var(--orange); color:var(--orange);" onclick="Chat.openChat(\'' + record.id + '\')">📋 和AI聊聊</button>';
+      }
     }
     html += '<button class="btn btn-danger" onclick="App.deleteFromDetail(\'' + record.id + '\')">删除</button>';
     html += '</div>';
