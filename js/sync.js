@@ -157,7 +157,7 @@ var Sync = (function() {
       if (!remoteContent) {
         // gist 为空或被删除，重新上传
         onProgress && onProgress('云端数据为空，正在上传...');
-        return createGist(localJson).then(function() {
+        return updateGist(gistId, localJson).then(function() {
           setLastSync();
           return { message: '数据已上传到云端' };
         });
@@ -167,14 +167,20 @@ var Sync = (function() {
 
       // 将远端数据合并到本地
       return Storage.importData(remoteContent).then(function(importResult) {
+        if (!importResult.success) {
+          // 云端数据格式不对，用本地数据覆盖
+          onProgress && onProgress('云端数据格式异常，正在用本地数据覆盖...');
+          return updateGist(gistId, localJson).then(function() {
+            setLastSync();
+            return { message: '云端数据已修复，本地数据已上传' };
+          });
+        }
         // 重新导出合并后的本地数据
         return Storage.getExportPayload().then(function(mergedJson) {
           onProgress && onProgress('正在上传合并后的数据...');
           return updateGist(gistId, mergedJson).then(function() {
             setLastSync();
-            return {
-              message: '同步完成！' + (importResult.message || '')
-            };
+            return { message: '同步完成！' + (importResult.message || '') };
           });
         });
       });
