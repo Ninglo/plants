@@ -38,7 +38,7 @@ var Form = (function() {
     {
       id: 'leafType', label: '叶子结构', desc: '看叶柄上是一整片还是好几片',
       options: [
-        { value: '一整片', desc: '一片完整的叶子，像扑克牌' },
+        { value: '一整片', desc: '叶柄上只有一片完整的叶' },
         { value: '羽毛状', desc: '小叶沿中轴排列，像羽毛' },
         { value: '手掌状', desc: '小叶从一个点散开，像手掌' },
         { value: '三片小叶', desc: '就三片，像三叶草' },
