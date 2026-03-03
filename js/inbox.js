@@ -99,6 +99,12 @@ var Inbox = (function() {
     Form.OBS_FRUIT.forEach(function(f) { html += renderChipField(f); });
     html += '</div>';
 
+    // 其他补充（选填）
+    html += '<div class="form-group" style="margin-top:14px;">';
+    html += '<label class="form-label">其他补充（选填）</label>';
+    html += '<textarea id="quick-obs-note" class="form-input" placeholder="气味、触感、周围环境、特殊发现等自由记录..." rows="3" style="resize:vertical; font-size:13px;"></textarea>';
+    html += '</div>';
+
     html += '</div>';
     return html;
   }
@@ -265,6 +271,12 @@ var Inbox = (function() {
     var locInput = document.getElementById('quick-location');
     if (locInput && locInput.value.trim()) {
       obsData.location = locInput.value.trim();
+    }
+
+    // 收集其他补充
+    var obsNoteEl = document.getElementById('quick-obs-note');
+    if (obsNoteEl && obsNoteEl.value.trim()) {
+      obsData.obsNote = obsNoteEl.value.trim();
     }
 
     function doCreate(photoIds) {

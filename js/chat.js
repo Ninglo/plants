@@ -5,14 +5,54 @@ var Chat = (function() {
   var BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
   var KEY_STORAGE = 'plants_gemini_key';
 
+  var CHAT_STORAGE = 'plants_chat_messages';
+  var CHAT_DISPLAY = 'plants_chat_display'; // 显示用消息（纯文本）
+  var CHAT_PLANTS = 'plants_chat_plant_ids';
+  var MAX_MESSAGES = 15; // 超过此数自动精简
+
   var messages = []; // Gemini contents 格式
+  var displayMessages = []; // 纯文本显示记录 [{role, text}]
   var systemPrompt = '';
   var currentRecordId = null;
   var isStreaming = false;
   var abortController = null;
+  var chatPlantIds = []; // 本轮对话涉及的植物 ID
 
   function getKey() { return localStorage.getItem(KEY_STORAGE) || ''; }
   function hasKey() { return !!getKey(); }
+
+  // 持久化对话
+  function saveChat() {
+    try {
+      localStorage.setItem(CHAT_STORAGE, JSON.stringify(messages));
+      localStorage.setItem(CHAT_DISPLAY, JSON.stringify(displayMessages));
+      localStorage.setItem(CHAT_PLANTS, JSON.stringify(chatPlantIds));
+    } catch (e) { /* localStorage 满了就放弃持久化 */ }
+  }
+
+  function loadChat() {
+    try {
+      var m = localStorage.getItem(CHAT_STORAGE);
+      var d = localStorage.getItem(CHAT_DISPLAY);
+      var p = localStorage.getItem(CHAT_PLANTS);
+      messages = m ? JSON.parse(m) : [];
+      displayMessages = d ? JSON.parse(d) : [];
+      chatPlantIds = p ? JSON.parse(p) : [];
+    } catch (e) {
+      messages = [];
+      displayMessages = [];
+      chatPlantIds = [];
+    }
+  }
+
+  function clearChat() {
+    messages = [];
+    displayMessages = [];
+    chatPlantIds = [];
+    localStorage.removeItem(CHAT_STORAGE);
+    localStorage.removeItem(CHAT_DISPLAY);
+    localStorage.removeItem(CHAT_PLANTS);
+  }
 
   // 格式化观察数据为文本
   function formatObservation(record) {
@@ -32,60 +72,47 @@ var Chat = (function() {
     if (record.location) lines.push('发现地点：' + record.location);
     if (record.date) lines.push('观察日期：' + record.date);
     if (record.attraction) lines.push('吸引我的：' + record.attraction);
+    if (record.obsNote) lines.push('其他补充：' + record.obsNote);
     return lines.join('\n');
   }
 
-  // 构建系统提示词
-  function buildSystemPrompt(record) {
-    var obs = formatObservation(record);
-    var hasPhotos = record.photoIds && record.photoIds.length > 0;
-    return '你是一位经验丰富的植物学导师，正在带学生做野外植物观察。\n' +
-      '你的背景是植物分类学，擅长通过形态特征鉴定物种。\n\n' +
-      '学生刚观察了一株植物' + (hasPhotos ? '并拍了照片' : '') + '，记录如下：\n' + obs + '\n\n' +
+  // 趣味称号池
+  var TITLES = [
+    '伟大的植物探险家', '了不起的自然观察者', '好奇的博物学家',
+    '勇敢的田野调查员', '敏锐的植物猎人', '执着的绿色侦探',
+    '未来的植物分类学家', '充满好奇心的自然旅人'
+  ];
+
+  function randomTitle() {
+    return TITLES[Math.floor(Math.random() * TITLES.length)];
+  }
+
+  // 构建系统提示词（引导式，非鉴定式）
+  function buildSystemPrompt() {
+    var title = randomTitle();
+    return '你是一位经验丰富的植物学导师，正在带一位' + title + '做野外观察训练。\n' +
+      '你的目标不是直接告诉答案，而是通过提问和引导，帮助对方自己建立植物观察的逻辑和方法。\n\n' +
+      '对话中可能出现多株植物，你要帮助对方发现不同植物之间的异同。\n\n' +
       '你的回复包含三个部分：\n\n' +
-      '「鉴定」\n' +
-      '给出最可能的 1-2 个候选，格式：中文名（拉丁学名）。\n' +
-      '说明判断依据，引用观察到的具体特征。如有近似种，指出区分要点。\n' +
-      '标注把握程度：很确定 / 比较确定 / 不太确定。\n\n' +
-      '「引导观察」\n' +
-      '根据当前信息的不足，引导再看看 1-2 个细节。\n' +
-      '比如：叶子背面有没有毛？花蕊什么颜色？树皮什么纹路？\n\n' +
-      '「知识延伸」\n' +
-      '围绕这株植物或所在的科/属，分享一个植物学知识点（分类趣事、进化适应、民间用途等），2-3 句话。\n\n' +
+      '「观察确认」\n' +
+      '基于提供的观察信息，指出哪些观察做得好、哪些细节很有价值。\n' +
+      '给予正面反馈，让观察者知道自己在正确的方向上。\n\n' +
+      '「引导深入」\n' +
+      '提出 2-3 个高价值的结构性问题，引导进一步观察。\n' +
+      '这些问题应该帮助缩小范围或发现关键鉴别特征。\n' +
+      '如果对话中有多株植物，引导对比不同科属之间的相似和不同。\n\n' +
+      '「知识线索」\n' +
+      '不要直接给出物种名称，而是给出分类线索，比如"这些特征指向某个科/属的方向"。\n' +
+      '分享相关的植物学思维方法，帮助对方构建自己的观察逻辑。\n\n' +
       '格式要求：\n' +
-      '- 用「」标注每个部分标题，不要用 # 号或星号\n' +
+      '- 用「」标注每部分标题，不要用 # 号或星号\n' +
       '- 全程不使用 * 号、# 号等 markdown 符号\n' +
-      '- 语气专业但亲切，像一位耐心的老师\n' +
-      '- 总字数控制在 300 字以内';
+      '- 语气像一位有趣的导师，专业但偶尔幽默\n' +
+      '- 总字数控制在 300 字以内\n' +
+      '- 除非对方明确说"帮我鉴定"或"这到底是什么植物"，否则不要直接给出物种名';
   }
 
-  // 构建 Gemini 格式的初始用户消息 parts
-  function buildInitialParts(record, photos) {
-    var parts = [];
-    var name = record.name || '这株植物';
-    parts.push({ text: '我刚观察了' + name + '，帮我看看这是什么植物？' });
-
-    // 添加照片（最多3张）
-    if (photos && photos.length > 0) {
-      var maxPhotos = Math.min(photos.length, 3);
-      for (var i = 0; i < maxPhotos; i++) {
-        if (photos[i]) {
-          // 从 data URL 提取 mime_type 和 base64 数据
-          var match = photos[i].match(/^data:([^;]+);base64,(.+)$/);
-          if (match) {
-            parts.push({
-              inline_data: {
-                mime_type: match[1],
-                data: match[2]
-              }
-            });
-          }
-        }
-      }
-    }
-
-    return parts;
-  }
+  // (buildInitialParts 已合并到 addPlantToChat)
 
   // 渲染聊天界面
   function renderChatUI() {
@@ -93,6 +120,7 @@ var Chat = (function() {
     html += '<div class="chat-messages" id="chat-messages"></div>';
     html += '<div class="chat-bottom-bar">';
     html += '<button class="chat-extract-btn" onclick="Chat.extractAndApply()">✨ 确认整理</button>';
+    html += '<button class="chat-new-btn" onclick="Chat.newJourney()" style="background:none; border:1px solid var(--border); color:var(--gray-500); padding:8px 14px; border-radius:20px; font-size:13px; cursor:pointer;">🌱 新旅程</button>';
     html += '</div>';
     html += '<div class="chat-input-bar">';
     html += '<input class="chat-input" id="chat-input" placeholder="继续聊聊..." onkeydown="if(event.key===\'Enter\')Chat.send()">';
@@ -117,7 +145,6 @@ var Chat = (function() {
   // 打开聊天
   function openChat(recordId) {
     if (!hasKey()) {
-      // 直接打开设置页面让用户填写 Key
       App.openSyncModal ? App.openSyncModal() : alert('请先在设置中填写 Gemini API Key');
       setTimeout(function() {
         var keyInput = document.getElementById('gemini-key-input');
@@ -130,51 +157,137 @@ var Chat = (function() {
     var record = Storage.getById(recordId);
     if (!record) { alert('找不到记录'); return; }
 
-    // 重置状态
-    messages = [];
-    systemPrompt = '';
     isStreaming = false;
+    systemPrompt = buildSystemPrompt();
+
+    // 加载持久化对话
+    loadChat();
 
     // 渲染 UI
     document.getElementById('modal-body').innerHTML = renderChatUI();
-    document.getElementById('modal-title').textContent = '📋 关于「' + (record.name || '这株植物') + '」';
+    document.getElementById('modal-title').textContent = '📋 植物观察之旅';
 
-    // 确保 modal 打开
     var overlay = document.getElementById('modal-overlay');
     if (!overlay.classList.contains('show')) {
       overlay.classList.add('show');
       document.body.style.overflow = 'hidden';
     }
 
-    // 加载照片并开始对话
+    // 如果已有对话历史，先恢复显示
+    if (displayMessages.length > 0) {
+      displayMessages.forEach(function(dm) {
+        appendMessage(dm.role, dm.text);
+      });
+    }
+
+    // 加载照片并追加这株植物
     var photoIds = record.photoIds || [];
     if (photoIds.length > 0) {
       PhotoDB.getMultiple(photoIds).then(function(results) {
-        // getMultiple 返回 [{id, data}] 数组，提取 data
         var photos = results.map(function(r) { return r && r.data; }).filter(Boolean);
-        startChat(record, photos);
+        addPlantToChat(record, photos);
       });
     } else {
-      startChat(record, []);
+      addPlantToChat(record, []);
     }
   }
 
-  function startChat(record, photos) {
-    systemPrompt = buildSystemPrompt(record);
-    var initialParts = buildInitialParts(record, photos);
-
-    // Gemini contents 格式
-    messages = [
-      { role: 'user', parts: initialParts }
-    ];
-
-    // 显示用户消息
+  // 追加一株新植物到对话（而非重置）
+  function addPlantToChat(record, photos) {
     var name = record.name || '这株植物';
-    appendMessage('user', '我刚观察了' + name + '，帮我看看这是什么植物？' +
-      (photos.length > 0 ? ' [附 ' + photos.length + ' 张照片]' : ''));
+    var obs = formatObservation(record);
+    var plantNum = chatPlantIds.length + 1;
 
-    // 发送到 AI
-    streamResponse();
+    // 记录植物 ID（避免重复计数）
+    if (chatPlantIds.indexOf(record.id) === -1) {
+      chatPlantIds.push(record.id);
+      plantNum = chatPlantIds.length;
+    } else {
+      // 已在对话中讨论过的植物，补充说明
+      plantNum = chatPlantIds.indexOf(record.id) + 1;
+    }
+
+    // 构建用户消息
+    var text = messages.length === 0
+      ? '我刚观察了' + name + '，请看看我的观察记录。\n\n' + obs
+      : '现在来看第 ' + plantNum + ' 株植物：' + name + '\n\n' + obs;
+
+    var parts = [{ text: text }];
+
+    // 添加照片
+    if (photos && photos.length > 0) {
+      var maxPhotos = Math.min(photos.length, 3);
+      for (var i = 0; i < maxPhotos; i++) {
+        if (photos[i]) {
+          var match = photos[i].match(/^data:([^;]+);base64,(.+)$/);
+          if (match) {
+            parts.push({ inline_data: { mime_type: match[1], data: match[2] } });
+          }
+        }
+      }
+    }
+
+    messages.push({ role: 'user', parts: parts });
+
+    var displayText = messages.length <= 1
+      ? '我刚观察了' + name + '，请看看我的观察记录。' + (photos.length > 0 ? ' [附 ' + photos.length + ' 张照片]' : '')
+      : '🌿 第 ' + plantNum + ' 株：' + name + (photos.length > 0 ? ' [附 ' + photos.length + ' 张照片]' : '');
+
+    displayMessages.push({ role: 'user', text: displayText });
+    appendMessage('user', displayText);
+    saveChat();
+
+    // 如果对话太长，先精简再请求
+    if (messages.length > MAX_MESSAGES) {
+      autoSummarize(function() { streamResponse(); });
+    } else {
+      streamResponse();
+    }
+  }
+
+  // 新旅程（手动重置）
+  function newJourney() {
+    if (isStreaming) return;
+    clearChat();
+    var container = document.getElementById('chat-messages');
+    if (container) container.innerHTML = '<div style="text-align:center; color:var(--gray-400); padding:20px; font-size:13px;">🌱 新旅程开始！去拍一株植物吧</div>';
+  }
+
+  // 自动精简对话
+  function autoSummarize(callback) {
+    var summarizePrompt = '请将以上所有植物的观察和讨论，精简为一段总结（200字以内）。\n' +
+      '保留每株植物的：关键观察特征、初步分类方向、待观察要点。\n' +
+      '严格只输出总结文本，不要输出其他内容。';
+
+    var url = BASE_URL + MODEL + ':generateContent?key=' + getKey();
+
+    var body = buildRequestBody(messages, false);
+    body.contents.push({ role: 'user', parts: [{ text: summarizePrompt }] });
+
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function(res) {
+      return res.json();
+    }).then(function(data) {
+      var summary = '';
+      try { summary = data.candidates[0].content.parts[0].text; } catch (e) {}
+      if (summary) {
+        // 用精简后的内容替换旧消息
+        messages = [
+          { role: 'user', parts: [{ text: '以下是之前观察的总结：\n\n' + summary }] },
+          { role: 'model', parts: [{ text: '好的，我已了解之前的观察记录。请继续！' }] }
+        ];
+        displayMessages.push({ role: 'model', text: '📝 [对话已自动精简，保留了关键信息]' });
+        appendMessage('model', '📝 [对话已自动精简，保留了关键信息]');
+        saveChat();
+      }
+      callback();
+    }).catch(function() {
+      // 精简失败就直接继续
+      callback();
+    });
   }
 
   // 构建 Gemini 请求体
@@ -223,6 +336,16 @@ var Chat = (function() {
       body: JSON.stringify(buildRequestBody(messages, true)),
       signal: abortController.signal
     }).then(function(response) {
+      if (response.status === 429) {
+        // 频率限制 — 等 5 秒自动重试
+        if (bubble) bubble.textContent = '请求太快了，5 秒后自动重试...';
+        setTimeout(function() {
+          if (bubble && bubble.parentNode) bubble.parentNode.removeChild(bubble);
+          isStreaming = false;
+          streamResponse();
+        }, 5000);
+        return;
+      }
       if (!response.ok) {
         return response.json().then(function(err) {
           var errMsg = (err.error && err.error.message) || 'API 请求失败 (' + response.status + ')';
@@ -318,6 +441,8 @@ var Chat = (function() {
     // 保存 AI 消息（Gemini 用 "model" 角色）
     if (text) {
       messages.push({ role: 'model', parts: [{ text: text }] });
+      displayMessages.push({ role: 'model', text: text });
+      saveChat();
     }
   }
 
@@ -331,7 +456,9 @@ var Chat = (function() {
 
     input.value = '';
     messages.push({ role: 'user', parts: [{ text: text }] });
+    displayMessages.push({ role: 'user', text: text });
     appendMessage('user', text);
+    saveChat();
     streamResponse();
   }
 
@@ -577,6 +704,7 @@ var Chat = (function() {
     applyExtracted: applyExtracted,
     stopStream: stopStream,
     hasKey: hasKey,
+    newJourney: newJourney,
     _pendingExtract: null
   };
 })();
