@@ -13,7 +13,7 @@ var Inbox = (function() {
     // 拍照区 — 大按钮（拍第一张前）
     html += '<div id="quick-photo-initial" style="text-align:center; margin-bottom:16px;">';
     html += '<label style="cursor:pointer;">';
-    html += '<input type="file" accept="image/*" style="display:none" id="quick-photo-input" onchange="Inbox.onPhotoSelected(this.files)">';
+    html += '<input type="file" accept="image/*" multiple style="display:none" id="quick-photo-input" onchange="Inbox.onPhotoSelected(this.files)">';
     html += '<div class="photo-add" style="width:100%; height:200px; font-size:16px; flex-direction:column; gap:8px; display:flex; align-items:center; justify-content:center;">';
     html += '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>';
     html += '<span style="color:var(--gray-500)">点击拍照或选择图片</span>';
@@ -24,7 +24,7 @@ var Inbox = (function() {
     html += '<div id="quick-photo-list" style="display:none; margin-bottom:16px;">';
     html += '<div id="quick-photo-thumbs" style="display:flex; gap:10px; flex-wrap:wrap;"></div>';
     html += '<label style="cursor:pointer; display:inline-block; margin-top:10px;">';
-    html += '<input type="file" accept="image/*" style="display:none" onchange="Inbox.onPhotoSelected(this.files)">';
+    html += '<input type="file" accept="image/*" multiple style="display:none" onchange="Inbox.onPhotoSelected(this.files)">';
     html += '<div class="photo-add" style="width:80px; height:80px; font-size:24px; display:flex; align-items:center; justify-content:center; border-radius:12px;">＋</div>';
     html += '</label>';
     html += '</div>';
@@ -153,26 +153,32 @@ var Inbox = (function() {
   }
 
   function onPhotoSelected(files) {
-    if (!files || !files[0]) return;
-    Storage.compressImage(files[0]).then(function(dataUrl) {
-      var photoId = 'photo_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-      quickPhotos.push({ id: photoId, data: dataUrl });
+    if (!files || files.length === 0) return;
+    var promises = [];
+    for (var i = 0; i < files.length; i++) {
+      promises.push(Storage.compressImage(files[i]));
+    }
+    Promise.all(promises).then(function(dataUrls) {
+      dataUrls.forEach(function(dataUrl) {
+        var photoId = 'photo_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+        quickPhotos.push({ id: photoId, data: dataUrl });
+
+        // 添加缩略图
+        var thumbs = document.getElementById('quick-photo-thumbs');
+        if (thumbs) {
+          var thumb = document.createElement('div');
+          thumb.style.cssText = 'position:relative; width:100px; height:100px; border-radius:12px; overflow:hidden; flex-shrink:0;';
+          thumb.innerHTML = '<img src="' + dataUrl + '" style="width:100%; height:100%; object-fit:cover;">' +
+            '<button type="button" onclick="Inbox.removePhoto(' + (quickPhotos.length - 1) + ')" style="position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; background:rgba(0,0,0,0.5); color:#fff; border:none; font-size:12px; line-height:20px; text-align:center; cursor:pointer;">✕</button>';
+          thumbs.appendChild(thumb);
+        }
+      });
 
       // 隐藏大按钮，显示缩略图列表
       var initial = document.getElementById('quick-photo-initial');
       if (initial) initial.style.display = 'none';
       var list = document.getElementById('quick-photo-list');
       if (list) list.style.display = 'block';
-
-      // 添加缩略图
-      var thumbs = document.getElementById('quick-photo-thumbs');
-      if (thumbs) {
-        var thumb = document.createElement('div');
-        thumb.style.cssText = 'position:relative; width:100px; height:100px; border-radius:12px; overflow:hidden; flex-shrink:0;';
-        thumb.innerHTML = '<img src="' + dataUrl + '" style="width:100%; height:100%; object-fit:cover;">' +
-          '<button type="button" onclick="Inbox.removePhoto(' + (quickPhotos.length - 1) + ')" style="position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; background:rgba(0,0,0,0.5); color:#fff; border:none; font-size:12px; line-height:20px; text-align:center; cursor:pointer;">✕</button>';
-        thumbs.appendChild(thumb);
-      }
 
       // 显示观察区 + 首次自动定位
       var obsSection = document.getElementById('quick-obs-section');
