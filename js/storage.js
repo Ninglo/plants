@@ -125,10 +125,14 @@ var Storage = (function() {
     plants.forEach(function(p) {
       if (p.family) families[p.family] = true;
     });
+    var noteCount = records.filter(function(r) { return r.type === 'note'; }).length;
+    var knowledgeCount = records.filter(function(r) { return r.type === 'knowledge'; }).length;
+    var ecologyCount = records.filter(function(r) { return r.type === 'ecology'; }).length;
     return {
       totalPlants: plants.length,
-      totalKnowledge: records.filter(function(r) { return r.type === 'knowledge'; }).length,
-      totalEcology: records.filter(function(r) { return r.type === 'ecology'; }).length,
+      totalKnowledge: knowledgeCount,
+      totalEcology: ecologyCount,
+      totalNotes: noteCount + knowledgeCount + ecologyCount,
       totalFamilies: Object.keys(families).length,
       pendingCount: getPending().length,
       observedCount: getObserved().length

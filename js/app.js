@@ -77,8 +77,8 @@ var App = (function() {
 
     html += '<div class="home-stats">';
     html += '<div class="stat-card"><div class="stat-number">' + stats.totalPlants + '</div><div class="stat-label">种植物</div></div>';
-    html += '<div class="stat-card blue"><div class="stat-number">' + stats.totalKnowledge + '</div><div class="stat-label">条知识</div></div>';
-    html += '<div class="stat-card orange"><div class="stat-number">' + stats.totalEcology + '</div><div class="stat-label">个发现</div></div>';
+    html += '<div class="stat-card blue"><div class="stat-number">' + stats.totalNotes + '</div><div class="stat-label">篇笔记</div></div>';
+    html += '<div class="stat-card orange"><div class="stat-number">' + stats.totalFamilies + '</div><div class="stat-label">个科</div></div>';
     html += '</div>';
 
     // 待处理队列
@@ -90,8 +90,7 @@ var App = (function() {
     // 快速新建
     html += '<div style="display:flex; gap:8px; margin-bottom:20px;">';
     html += '<button class="btn btn-primary btn-sm" style="flex:1;" onclick="Form.openNew(\'plant\')">🌿 记录植物</button>';
-    html += '<button class="btn btn-blue btn-sm" style="flex:1;" onclick="Form.openNew(\'knowledge\')">📖 记录知识</button>';
-    html += '<button class="btn btn-orange btn-sm" style="flex:1;" onclick="Form.openNew(\'ecology\')">🔍 记录发现</button>';
+    html += '<button class="btn btn-blue btn-sm" style="flex:1;" onclick="Knowledge.openNoteEditor()">📝 写笔记</button>';
     html += '</div>';
 
     // 最近记录
@@ -102,11 +101,12 @@ var App = (function() {
     if (recent.length > 0) {
       html += '<div class="section-title">最近记录</div>';
       recent.forEach(function(r) {
-        var badgeClass = r.type === 'plant' ? 'badge-plant' : r.type === 'knowledge' ? 'badge-knowledge' : 'badge-ecology';
-        var typeLabel = r.type === 'plant' ? '🌿' : r.type === 'knowledge' ? '📖' : '🔍';
+        var badgeClass = r.type === 'plant' ? 'badge-plant' : r.type === 'note' ? 'badge-knowledge' : r.type === 'knowledge' ? 'badge-knowledge' : 'badge-ecology';
+        var typeLabel = r.type === 'plant' ? '🌿' : r.type === 'note' ? '📝' : r.type === 'knowledge' ? '📖' : '🔍';
         var name = r.name || r.title || '未命名';
 
-        html += '<div class="knowledge-item" onclick="App.showDetail(\'' + r.id + '\')">';
+        var clickHandler = r.type === 'note' ? 'Knowledge.openNoteDetail(\'' + r.id + '\')' : 'App.showDetail(\'' + r.id + '\')';
+        html += '<div class="knowledge-item" onclick="' + clickHandler + '">';
         if (r.photoIds && r.photoIds[0]) {
           html += '<img style="width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0;" data-photo-id="' + r.photoIds[0] + '" src="' + Storage.BLANK_IMG + '">';
         } else {
@@ -172,6 +172,12 @@ var App = (function() {
         html += '<img class="detail-photo" data-photo-id="' + photoId + '" src="' + Storage.BLANK_IMG + '">';
       });
       html += '</div>';
+    }
+
+    // 如果是 note 类型，直接跳转到笔记详情
+    if (record.type === 'note') {
+      Knowledge.openNoteDetail(id);
+      return;
     }
 
     // 类型标记
@@ -267,6 +273,7 @@ var App = (function() {
       html += renderField('发现日期', record.date);
       html += renderField('发现地点', record.location);
       html += renderField('是什么吸引了我', record.attraction);
+      html += renderField('其他补充', record.obsNote);
       html += renderField('学习笔记', record.notes);
       html += renderField('我的思考', record.thoughts);
     } else if (record.type === 'knowledge') {
@@ -306,6 +313,37 @@ var App = (function() {
           html += '</div>';
         }
       });
+      html += '</div>';
+    }
+
+    // 植物绑定笔记
+    if (record.type === 'plant') {
+      var linkedNotes = Storage.getByType('note').filter(function(n) {
+        return n.status !== 'pending' && n.linkedPlantIds && n.linkedPlantIds.indexOf(record.id) !== -1;
+      });
+      // 也检查旧类型
+      var linkedKnowledge = Storage.getByType('knowledge').concat(Storage.getByType('ecology')).filter(function(n) {
+        return n.status !== 'pending' && n.linkedPlantIds && n.linkedPlantIds.indexOf(record.id) !== -1;
+      });
+      var allLinkedNotes = linkedNotes.concat(linkedKnowledge);
+
+      html += '<div class="plant-notes-section">';
+      html += '<div class="plant-notes-title">';
+      html += '<span>我的笔记</span>';
+      html += '<button class="btn btn-sm" style="padding:4px 12px; font-size:12px;" onclick="event.stopPropagation(); Knowledge.openNoteEditor(null, \'' + record.id + '\')">+ 写笔记</button>';
+      html += '</div>';
+      if (allLinkedNotes.length > 0) {
+        allLinkedNotes.forEach(function(n) {
+          var noteTitle = n.title || '未命名笔记';
+          var noteExcerpt = (n.content || n.observation || '').substring(0, 50);
+          html += '<div class="plant-note-item" onclick="event.stopPropagation(); Knowledge.openNoteDetail(\'' + n.id + '\')">';
+          html += '<div style="font-size:14px; font-weight:500;">' + escapeHtml(noteTitle) + '</div>';
+          if (noteExcerpt) html += '<div style="font-size:13px; color:var(--gray-500); margin-top:2px;">' + escapeHtml(noteExcerpt) + (noteExcerpt.length >= 50 ? '...' : '') + '</div>';
+          html += '</div>';
+        });
+      } else {
+        html += '<div style="font-size:13px; color:var(--gray-400); padding:8px 0;">还没有笔记，点击上方按钮写一篇</div>';
+      }
       html += '</div>';
     }
 

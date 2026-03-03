@@ -492,6 +492,11 @@ var Form = (function() {
     html += '<div class="input-with-voice"><textarea class="form-textarea" id="f-attraction" placeholder="记录你最初注意到它的原因...">' + '</textarea>' + createVoiceBtn() + '</div>';
     html += '</div>';
 
+    html += '<div class="form-group">';
+    html += '<label class="form-label">其他补充（选填）</label>';
+    html += '<textarea class="form-textarea" id="f-obsNote" rows="3" placeholder="气味、触感、周围环境、特殊发现等自由记录..." style="resize:vertical; font-size:13px;"></textarea>';
+    html += '</div>';
+
     html += '</div>'; // end step 1
 
     // ===== Step 2: 专业信息 =====
@@ -682,6 +687,7 @@ var Form = (function() {
       setVal('f-date', record.date);
       setVal('f-location', record.location);
       setVal('f-attraction', record.attraction);
+      setVal('f-obsNote', record.obsNote);
       setVal('f-notes', record.notes);
       setVal('f-thoughts', record.thoughts);
       // 恢复观察部位选择
@@ -747,6 +753,7 @@ var Form = (function() {
       record.features = getVal('f-features');
       record.location = getVal('f-location');
       record.attraction = getVal('f-attraction');
+      record.obsNote = getVal('f-obsNote');
       record.notes = getVal('f-notes');
       record.thoughts = getVal('f-thoughts');
       // 观察部位和字段
@@ -831,6 +838,7 @@ var Form = (function() {
       name: name,
       location: getVal('f-location'),
       attraction: getVal('f-attraction'),
+      obsNote: getVal('f-obsNote'),
       // 也保存用户可能已填的专业字段
       latinName: getVal('f-latinName'),
       family: getVal('f-family'),
