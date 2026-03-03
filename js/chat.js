@@ -646,6 +646,8 @@ var Chat = (function() {
     container.scrollTop = container.scrollHeight;
   }
 
+  var celebrationTags = []; // 庆祝界面的标签
+
   function applyExtracted() {
     var data = Chat._pendingExtract;
     if (!data || !currentRecordId) return;
@@ -658,31 +660,130 @@ var Chat = (function() {
     if (data.features) updates.features = data.features;
     if (data.notes) updates.notes = data.notes;
 
-    // 如果核心字段都有了，升级为 complete
     if (data.name && data.family) {
       updates.status = 'complete';
     }
 
     Storage.update(currentRecordId, updates);
     Chat._pendingExtract = null;
+    clearChat();
 
-    // 显示成功 + 完成按钮
-    var container = document.getElementById('chat-messages');
-    if (container) {
-      var successHtml = '<div style="text-align:center; padding:16px 0;">';
-      successHtml += '<div style="font-size:32px; margin-bottom:8px;">✅</div>';
-      successHtml += '<div style="font-weight:600; font-size:15px; color:var(--green);">信息已补全！</div>';
-      if (updates.status === 'complete') {
-        successHtml += '<div style="font-size:13px; color:var(--gray-400); margin-top:4px;">记录已升级为「已收录」状态</div>';
-      }
-      successHtml += '<button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="App.closeModal()">完成</button>';
-      successHtml += '</div>';
-      var div = document.createElement('div');
-      div.innerHTML = successHtml;
-      container.appendChild(div.firstChild);
-      container.scrollTop = container.scrollHeight;
+    // 显示庆祝界面
+    var record = Storage.getById(currentRecordId);
+    celebrationTags = (record.tags || []).slice();
+    showChatCelebration(record);
+    App.refreshView();
+  }
+
+  function showChatCelebration(record) {
+    var name = record.name || '未命名';
+
+    // 彩纸
+    var confettiHtml = '';
+    var colors = ['#7ba862', '#d4a0a0', '#e0b85c', '#8bb4c7', '#d4a373', '#b8d4a0', '#f0c8c8'];
+    for (var i = 0; i < 30; i++) {
+      var c = colors[i % colors.length];
+      confettiHtml += '<div class="confetti-piece" style="left:' + (Math.random() * 100) + '%;animation-delay:' + (Math.random() * 2) + 's;background:' + c + ';width:' + (6 + Math.random() * 8) + 'px;height:' + (6 + Math.random() * 8) + 'px;"></div>';
     }
 
+    var html = '<div class="celebration-wrap">';
+    html += '<div class="confetti-container">' + confettiHtml + '</div>';
+    html += '<div class="celebration-content" style="padding-top:8px;">';
+    html += '<div style="font-size:36px; margin-bottom:4px;">🎉</div>';
+    html += '<div class="celebration-title">收录完成！</div>';
+    html += '<div class="celebration-subtitle">' + escapeHtml(name) + '</div>';
+    html += '</div>';
+
+    // 摘要卡片
+    html += '<div class="chat-celebration-summary">';
+    if (record.family) html += '<div class="chat-celebration-field"><span style="color:var(--gray-400);min-width:36px;">科</span><span>' + escapeHtml(record.family) + '</span></div>';
+    if (record.genus) html += '<div class="chat-celebration-field"><span style="color:var(--gray-400);min-width:36px;">属</span><span>' + escapeHtml(record.genus) + '</span></div>';
+    if (record.features) html += '<div class="chat-celebration-field"><span style="color:var(--gray-400);min-width:36px;">特征</span><span>' + escapeHtml(record.features) + '</span></div>';
+    html += '</div>';
+
+    // 标签输入区
+    html += '<div class="chat-celebration-tags">';
+    html += '<div style="font-size:14px; font-weight:600; margin-bottom:8px;">给它贴个标签</div>';
+    html += '<div class="tags-container" id="celebration-tags-container">';
+    html += buildCelebrationTagsContent();
+    html += '</div>';
+    var allTags = Storage.getAllTags();
+    var tagNames = Object.keys(allTags);
+    if (tagNames.length > 0) {
+      html += '<div class="batch-tag-suggestions" style="margin-top:8px;">';
+      tagNames.forEach(function(t) {
+        if (celebrationTags.indexOf(t) === -1) {
+          html += '<button class="filter-chip" onclick="Chat.addCelebrationTag(\'' + t.replace(/'/g, "\\'") + '\')">' + escapeHtml(t) + '</button>';
+        }
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // 分享卡片
+    html += '<canvas id="share-card-canvas" width="540" height="720" style="display:none;"></canvas>';
+    html += '<div class="share-card-preview" id="share-card-preview" style="margin-top:12px;"></div>';
+
+    // 按钮
+    html += '<div style="display:flex; gap:10px; margin-top:14px;">';
+    html += '<button class="btn btn-primary btn-block" onclick="Chat.finishCelebration()">完成</button>';
+    html += '<button class="btn btn-block" onclick="Form.downloadCard()">📷 保存卡片</button>';
+    html += '</div>';
+    html += '</div>';
+
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('modal-title').textContent = '';
+    setTimeout(function() { if (Form.drawShareCard) Form.drawShareCard(record); }, 100);
+  }
+
+  function buildCelebrationTagsContent() {
+    var html = '';
+    celebrationTags.forEach(function(tag, i) {
+      html += '<span class="tag">' + escapeHtml(tag) + '<button class="tag-remove" onclick="Chat.removeCelebrationTag(' + i + ')">×</button></span>';
+    });
+    html += '<input type="text" class="tag-input" id="celebration-tag-input" placeholder="输入标签后按回车" onkeydown="Chat.handleCelebrationTagKey(event)">';
+    return html;
+  }
+
+  function updateCelebrationTags() {
+    var container = document.getElementById('celebration-tags-container');
+    if (container) {
+      container.innerHTML = buildCelebrationTagsContent();
+      var input = document.getElementById('celebration-tag-input');
+      if (input) input.focus();
+    }
+  }
+
+  function handleCelebrationTagKey(event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      var input = document.getElementById('celebration-tag-input');
+      var tag = input.value.trim();
+      if (tag && celebrationTags.indexOf(tag) === -1) {
+        celebrationTags.push(tag);
+        updateCelebrationTags();
+      }
+    }
+  }
+
+  function addCelebrationTag(tag) {
+    if (celebrationTags.indexOf(tag) === -1) {
+      celebrationTags.push(tag);
+      updateCelebrationTags();
+    }
+  }
+
+  function removeCelebrationTag(index) {
+    celebrationTags.splice(index, 1);
+    updateCelebrationTags();
+  }
+
+  function finishCelebration() {
+    if (currentRecordId && celebrationTags.length > 0) {
+      Storage.update(currentRecordId, { tags: celebrationTags });
+    }
+    celebrationTags = [];
+    App.closeModal();
     App.refreshView();
   }
 
@@ -705,6 +806,10 @@ var Chat = (function() {
     stopStream: stopStream,
     hasKey: hasKey,
     newJourney: newJourney,
+    handleCelebrationTagKey: handleCelebrationTagKey,
+    addCelebrationTag: addCelebrationTag,
+    removeCelebrationTag: removeCelebrationTag,
+    finishCelebration: finishCelebration,
     _pendingExtract: null
   };
 })();

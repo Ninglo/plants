@@ -1787,6 +1787,117 @@ img[data-photo-id] {
   background: var(--gray-100);
 }
 
+/* ========== 批量选择打标签 ========== */
+.cards-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.cards-toolbar .search-bar { flex: 1; margin-bottom: 0; }
+.cards-select-toggle {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gray-300);
+  background: var(--white);
+  color: var(--gray-500);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.cards-select-toggle.active {
+  border-color: var(--green);
+  background: var(--green-light);
+  color: var(--green);
+}
+.card { position: relative; }
+.card-checkbox {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.9);
+  background: rgba(0,0,0,0.25);
+  color: #fff;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: all 0.2s;
+}
+.card-checkbox.checked { background: var(--green); border-color: var(--green); }
+.card-selected { outline: 2.5px solid var(--green); outline-offset: -2px; }
+
+.batch-tag-bar {
+  position: fixed;
+  bottom: 68px;
+  left: 0;
+  right: 0;
+  background: var(--white);
+  border-top: 1px solid var(--gray-200);
+  padding: 14px 18px;
+  z-index: 100;
+  box-shadow: 0 -4px 20px rgba(120,100,80,0.1);
+  animation: batch-slide-up 0.25s ease;
+}
+@keyframes batch-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.batch-tag-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.batch-tag-count { font-size: 14px; font-weight: 600; color: var(--green); }
+.batch-tag-input-area { margin-bottom: 12px; }
+.batch-tag-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.batch-tag-suggestions .filter-chip { padding: 4px 12px; font-size: 12px; }
+
+.batch-toast {
+  position: fixed;
+  bottom: 160px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--gray-800);
+  color: var(--white);
+  padding: 10px 24px;
+  border-radius: 20px;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 200;
+  white-space: nowrap;
+}
+.batch-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ========== AI 庆祝界面 ========== */
+.chat-celebration-summary {
+  position: relative; z-index: 1;
+  background: var(--green-light);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin: 12px 0;
+  text-align: left;
+}
+.chat-celebration-field { display: flex; gap: 8px; margin-bottom: 6px; font-size: 14px; }
+.chat-celebration-tags {
+  position: relative; z-index: 1;
+  margin: 12px 0;
+  padding: 14px;
+  background: rgba(255,248,220,0.6);
+  border-radius: var(--radius-sm);
+  border: 1.5px dashed var(--orange);
+}
+
 /* ========== 响应式 ========== */
 @media (min-width: 768px) {
   .main-content {

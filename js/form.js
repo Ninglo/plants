@@ -1580,6 +1580,7 @@ var Form = (function() {
     OBS_FRUIT: OBS_FRUIT,
     getAllObsFields: getAllObsFields,
     getChipVal: getChipVal,
-    showCelebration: showCelebration
+    showCelebration: showCelebration,
+    drawShareCard: drawShareCard
   };
 })();
