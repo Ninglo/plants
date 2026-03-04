@@ -1957,13 +1957,33 @@ img[data-photo-id] {
 .theme-dot-purple { background: linear-gradient(135deg, #d8ccec 0%, #c4b8d8 50%, #e4dcf0 100%); }
 .theme-dot-wood   { background: linear-gradient(135deg, #ddd8cc 0%, #d0cab8 50%, #e0dcd0 100%); }
 
+/* 编辑器元信息行 */
+.editor-meta-row {
+  display: flex; align-items: center; gap: 12px;
+  flex-wrap: wrap; margin-bottom: 12px;
+}
+.editor-meta-row .theme-picker { margin: 0; }
+.editor-plant-select {
+  flex: 1; min-width: 0;
+  padding: 6px 10px; border-radius: 16px;
+  border: 1.5px solid var(--gray-200); background: var(--gray-50);
+  font-size: 13px; font-family: inherit; color: var(--gray-600);
+  outline: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 26px;
+}
+
 /* ========== 块编辑器 ========== */
 .block-editor {
-  min-height: 200px;
+  min-height: 50vh;
   padding: 14px;
   border-radius: var(--radius);
-  margin-bottom: 8px;
+  margin-bottom: 0;
   transition: background-image 0.3s;
+}
+.block-toolbar-inner {
+  padding: 8px 14px 4px; margin-top: -4px;
 }
 .block { position: relative; }
 .block-textarea {
@@ -2037,9 +2057,8 @@ img[data-photo-id] {
 }
 
 /* 底部工具栏 */
-.block-toolbar {
-  display: flex; gap: 12px; padding: 10px 0; margin-top: 4px;
-  border-top: 1px dashed var(--gray-200);
+.block-toolbar, .block-toolbar-inner {
+  display: flex; gap: 12px; padding: 10px 0;
 }
 .block-toolbar-btn {
   display: flex; align-items: center; gap: 6px;

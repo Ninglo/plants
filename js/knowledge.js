@@ -171,7 +171,8 @@ var Knowledge = (function() {
     html += '<input type="text" class="note-title-input" id="note-title" placeholder="笔记标题..." value="' +
       escapeHtml((note && note.title) || '') + '">';
 
-    // 主题选择器
+    // 元信息行：主题选择 + 关联植物
+    html += '<div class="editor-meta-row">';
     html += '<div class="theme-picker" id="theme-picker">';
     THEMES.forEach(function(t) {
       html += '<div class="theme-dot theme-dot-' + t.id +
@@ -179,31 +180,26 @@ var Knowledge = (function() {
         '" data-theme="' + t.id + '" onclick="Knowledge.selectTheme(\'' + t.id + '\')" title="' + t.label + '"></div>';
     });
     html += '</div>';
-
-    // 块编辑器容器
-    html += '<div class="block-editor theme-' + editorState.theme + '" id="block-editor"></div>';
-
-    // 底部工具栏
-    html += '<div class="block-toolbar">';
-    html += '<label class="block-toolbar-btn"><input type="file" accept="image/*" multiple style="display:none" ' +
-      'onchange="Knowledge.onToolbarPhotos(this.files)">📷 插入图片</label>';
-    html += '</div>';
-
-    // 关联植物
     var plants = Storage.getByType('plant').filter(function(r) { return r.status !== 'pending'; });
     if (plants.length > 0) {
-      html += '<div class="form-group" style="margin-top:14px;">';
-      html += '<label class="form-label">关联植物（选填）</label>';
-      html += '<select class="form-input" id="note-linked-plant" style="font-size:14px;">';
-      html += '<option value="">不关联</option>';
+      html += '<select class="editor-plant-select" id="note-linked-plant">';
+      html += '<option value="">🌿 关联植物（选填）</option>';
       plants.forEach(function(p) {
         var selected = '';
         if (note && note.linkedPlantIds && note.linkedPlantIds.indexOf(p.id) !== -1) selected = ' selected';
         else if (!note && preLinkedPlantId && p.id === preLinkedPlantId) selected = ' selected';
         html += '<option value="' + p.id + '"' + selected + '>' + escapeHtml(p.name || '未命名') + '</option>';
       });
-      html += '</select></div>';
+      html += '</select>';
     }
+    html += '</div>';
+
+    // 块编辑器容器（含内嵌插入图片按钮）
+    html += '<div class="block-editor theme-' + editorState.theme + '" id="block-editor"></div>';
+    html += '<div class="block-toolbar-inner">';
+    html += '<label class="block-toolbar-btn"><input type="file" accept="image/*" multiple style="display:none" ' +
+      'onchange="Knowledge.onToolbarPhotos(this.files)">📷 插入图片</label>';
+    html += '</div>';
 
     // 保存按钮
     html += '<button class="btn btn-primary btn-block" style="margin-top:20px;" ' +
