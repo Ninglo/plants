@@ -1,18 +1,16 @@
 var Chat = (function() {
   'use strict';
 
-  var DEFAULT_MODEL = 'gpt-4.1-mini';
-  var DEFAULT_BASE_URL = 'https://api.openai.com/v1';
-  var KEY_STORAGE = 'plants_openai_key';
-  var MODEL_STORAGE = 'plants_openai_model';
-  var BASE_URL_STORAGE = 'plants_openai_base_url';
+  var MODEL = 'gemini-2.5-flash';
+  var BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
+  var KEY_STORAGE = 'plants_gemini_key';
 
   var CHAT_STORAGE = 'plants_chat_messages';
   var CHAT_DISPLAY = 'plants_chat_display'; // 显示用消息（纯文本）
   var CHAT_PLANTS = 'plants_chat_plant_ids';
   var MAX_MESSAGES = 15; // 超过此数自动精简
 
-  var messages = []; // 统一内部格式：{ role, parts: [{text}|{inline_data}] }
+  var messages = []; // Gemini contents 格式
   var displayMessages = []; // 纯文本显示记录 [{role, text}]
   var systemPrompt = '';
   var currentRecordId = null;
@@ -21,11 +19,6 @@ var Chat = (function() {
   var chatPlantIds = []; // 本轮对话涉及的植物 ID
 
   function getKey() { return localStorage.getItem(KEY_STORAGE) || ''; }
-  function getModel() { return localStorage.getItem(MODEL_STORAGE) || DEFAULT_MODEL; }
-  function getBaseUrl() {
-    var raw = localStorage.getItem(BASE_URL_STORAGE) || DEFAULT_BASE_URL;
-    return raw.replace(/\/+$/, '');
-  }
   function hasKey() { return !!getKey(); }
 
   // 持久化对话
@@ -136,9 +129,9 @@ var Chat = (function() {
   // 打开聊天
   function openChat(recordId) {
     if (!hasKey()) {
-      App.openSyncModal ? App.openSyncModal() : alert('请先在设置中填写 OpenAI / CodeX API Key');
+      App.openSyncModal ? App.openSyncModal() : alert('请先在设置中填写 Gemini API Key');
       setTimeout(function() {
-        var keyInput = document.getElementById('openai-key-input');
+        var keyInput = document.getElementById('gemini-key-input');
         if (keyInput) { keyInput.focus(); keyInput.scrollIntoView({ behavior: 'smooth' }); }
       }, 300);
       return;
@@ -250,27 +243,20 @@ var Chat = (function() {
       '保留每株植物的：关键观察特征、初步分类方向、待观察要点。\n' +
       '严格只输出总结文本，不要输出其他内容。';
 
-    var url = getBaseUrl() + '/chat/completions';
-    var summarizeMessages = messages.slice();
-    summarizeMessages.push({ role: 'user', parts: [{ text: summarizePrompt }] });
+    var url = BASE_URL + MODEL + ':generateContent?key=' + getKey();
+
+    var body = buildRequestBody(messages, false);
+    body.contents.push({ role: 'user', parts: [{ text: summarizePrompt }] });
 
     fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + getKey()
-      },
-      body: JSON.stringify(buildRequestBody(summarizeMessages, false, false))
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
     }).then(function(res) {
-      if (!res.ok) {
-        return res.json().then(function(err) {
-          throw new Error((err.error && err.error.message) || '请求失败');
-        });
-      }
       return res.json();
     }).then(function(data) {
       var summary = '';
-      try { summary = data.choices[0].message.content || ''; } catch (e) {}
+      try { summary = data.candidates[0].content.parts[0].text; } catch (e) {}
       if (summary) {
         // 用精简后的内容替换旧消息
         messages = [
@@ -288,82 +274,23 @@ var Chat = (function() {
     });
   }
 
-  function toOpenAIMessage(msg, includePhotos) {
-    var role = msg.role === 'model' ? 'assistant' : msg.role;
-    var parts = msg.parts || [];
-    var content = [];
-    var textOnly = [];
-
-    for (var i = 0; i < parts.length; i++) {
-      var part = parts[i];
-      if (part.text !== undefined) {
-        textOnly.push(part.text);
-        content.push({ type: 'text', text: part.text });
-      } else if (includePhotos && role === 'user' && part.inline_data && part.inline_data.mime_type && part.inline_data.data) {
-        content.push({
-          type: 'image_url',
-          image_url: { url: 'data:' + part.inline_data.mime_type + ';base64,' + part.inline_data.data }
-        });
+  // 构建 Gemini 请求体
+  function buildRequestBody(msgs, includePhotos) {
+    var contents = msgs.map(function(msg, idx) {
+      if (!includePhotos && idx === 0 && msg.parts) {
+        // 去掉图片 parts，只保留 text
+        var textParts = msg.parts.filter(function(p) { return p.text !== undefined; });
+        return { role: msg.role, parts: textParts };
       }
-    }
+      return msg;
+    });
 
-    if (!includePhotos || content.length === textOnly.length) {
-      return { role: role, content: textOnly.join('\n') };
-    }
-    return { role: role, content: content };
-  }
-
-  // 构建 OpenAI 请求体
-  function buildRequestBody(msgs, includePhotos, stream) {
-    var openAIMessages = [{ role: 'system', content: systemPrompt }];
-    for (var i = 0; i < msgs.length; i++) {
-      openAIMessages.push(toOpenAIMessage(msgs[i], includePhotos));
-    }
     return {
-      model: getModel(),
-      messages: openAIMessages,
-      stream: !!stream
+      systemInstruction: {
+        parts: [{ text: systemPrompt }]
+      },
+      contents: contents
     };
-  }
-
-  function readOpenAIStream(response, onDelta, onDone) {
-    var reader = response.body.getReader();
-    var decoder = new TextDecoder();
-    var buffer = '';
-
-    function readChunk() {
-      reader.read().then(function(result) {
-        if (result.done) {
-          onDone();
-          return;
-        }
-
-        buffer += decoder.decode(result.value, { stream: true });
-        var lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (var i = 0; i < lines.length; i++) {
-          var line = lines[i].trim();
-          if (!line.startsWith('data: ')) continue;
-          var data = line.slice(6);
-          if (data === '[DONE]') {
-            onDone();
-            return;
-          }
-          try {
-            var parsed = JSON.parse(data);
-            var delta = parsed.choices && parsed.choices[0] && parsed.choices[0].delta && parsed.choices[0].delta.content;
-            if (delta) onDelta(delta);
-          } catch (e) { /* skip parse errors */ }
-        }
-
-        readChunk();
-      }).catch(function(err) {
-        if (err.name !== 'AbortError') onDone();
-      });
-    }
-
-    readChunk();
   }
 
   // 流式请求 AI 响应
@@ -385,15 +312,12 @@ var Chat = (function() {
     abortController = new AbortController();
     var fullText = '';
 
-    var url = getBaseUrl() + '/chat/completions';
+    var url = BASE_URL + MODEL + ':streamGenerateContent?alt=sse&key=' + getKey();
 
     fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + getKey()
-      },
-      body: JSON.stringify(buildRequestBody(messages, true, true)),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildRequestBody(messages, true)),
       signal: abortController.signal
     }).then(function(response) {
       if (response.status === 429) {
@@ -413,18 +337,60 @@ var Chat = (function() {
         });
       }
 
-      readOpenAIStream(response, function(delta) {
-        fullText += delta;
-        if (bubble) {
-          var cursorEl = bubble.querySelector('.chat-typing-cursor');
-          bubble.textContent = fullText;
-          if (cursorEl) bubble.appendChild(cursorEl);
-        }
-        var container = document.getElementById('chat-messages');
-        if (container) container.scrollTop = container.scrollHeight;
-      }, function() {
-        finishStream(fullText, bubble);
-      });
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+
+      function readChunk() {
+        reader.read().then(function(result) {
+          if (result.done) {
+            finishStream(fullText, bubble);
+            return;
+          }
+
+          buffer += decoder.decode(result.value, { stream: true });
+          var lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line.startsWith('data: ')) continue;
+            var data = line.slice(6);
+            if (data === '[DONE]') {
+              finishStream(fullText, bubble);
+              return;
+            }
+            try {
+              var parsed = JSON.parse(data);
+              // Gemini SSE 格式: candidates[0].content.parts[0].text
+              var parts = parsed.candidates && parsed.candidates[0] &&
+                parsed.candidates[0].content && parsed.candidates[0].content.parts;
+              if (parts) {
+                for (var j = 0; j < parts.length; j++) {
+                  if (parts[j].text) {
+                    fullText += parts[j].text;
+                  }
+                }
+              }
+              if (bubble) {
+                var cursorEl = bubble.querySelector('.chat-typing-cursor');
+                bubble.textContent = fullText;
+                if (cursorEl) bubble.appendChild(cursorEl);
+              }
+              var container = document.getElementById('chat-messages');
+              if (container) container.scrollTop = container.scrollHeight;
+            } catch (e) { /* skip parse errors */ }
+          }
+
+          readChunk();
+        }).catch(function(err) {
+          if (err.name !== 'AbortError') {
+            finishStream(fullText, bubble);
+          }
+        });
+      }
+
+      readChunk();
     }).catch(function(err) {
       isStreaming = false;
       var sendBtn2 = document.getElementById('chat-send-btn');
@@ -510,15 +476,12 @@ var Chat = (function() {
     abortController = new AbortController();
     var fullText = '';
 
-    var url = getBaseUrl() + '/chat/completions';
+    var url = BASE_URL + MODEL + ':streamGenerateContent?alt=sse&key=' + getKey();
 
     fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + getKey()
-      },
-      body: JSON.stringify(buildRequestBody(messages, false, true)),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildRequestBody(messages, false)),
       signal: abortController.signal
     }).then(function(response) {
       if (!response.ok) {
@@ -527,18 +490,54 @@ var Chat = (function() {
         });
       }
 
-      readOpenAIStream(response, function(delta) {
-        fullText += delta;
-        if (bubble) {
-          var cursorEl = bubble.querySelector('.chat-typing-cursor');
-          bubble.textContent = fullText;
-          if (cursorEl) bubble.appendChild(cursorEl);
-        }
-        var container = document.getElementById('chat-messages');
-        if (container) container.scrollTop = container.scrollHeight;
-      }, function() {
-        finishExtraction(fullText, bubble);
-      });
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+
+      function readChunk() {
+        reader.read().then(function(result) {
+          if (result.done) {
+            finishExtraction(fullText, bubble);
+            return;
+          }
+
+          buffer += decoder.decode(result.value, { stream: true });
+          var lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line.startsWith('data: ')) continue;
+            var data = line.slice(6);
+            if (data === '[DONE]') {
+              finishExtraction(fullText, bubble);
+              return;
+            }
+            try {
+              var parsed = JSON.parse(data);
+              var parts = parsed.candidates && parsed.candidates[0] &&
+                parsed.candidates[0].content && parsed.candidates[0].content.parts;
+              if (parts) {
+                for (var j = 0; j < parts.length; j++) {
+                  if (parts[j].text) fullText += parts[j].text;
+                }
+              }
+              if (bubble) {
+                var cursorEl = bubble.querySelector('.chat-typing-cursor');
+                bubble.textContent = fullText;
+                if (cursorEl) bubble.appendChild(cursorEl);
+              }
+              var container = document.getElementById('chat-messages');
+              if (container) container.scrollTop = container.scrollHeight;
+            } catch (e) {}
+          }
+          readChunk();
+        }).catch(function(err) {
+          if (err.name !== 'AbortError') finishExtraction(fullText, bubble);
+        });
+      }
+
+      readChunk();
     }).catch(function(err) {
       isStreaming = false;
       if (sendBtn) sendBtn.disabled = false;

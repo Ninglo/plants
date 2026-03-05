@@ -451,27 +451,21 @@ var App = (function() {
     html += '<div class="sync-result" id="sync-result"></div>';
     html += '</div>';
 
-    // ===== AI 配置区 =====
+    // ===== API 密钥区 =====
     html += '<div class="sync-divider"></div>';
     html += '<div class="sync-section">';
-    html += '<div class="sync-section-title">🔑 AI 植物识别（OpenAI / CodeX）</div>';
-    html += '<div style="font-size:12px; color:var(--gray-400); margin-bottom:8px;">支持官方 OpenAI API，也支持你自己的兼容代理地址</div>';
-    var openAIKey = localStorage.getItem('plants_openai_key') || '';
-    var openAIBaseUrl = localStorage.getItem('plants_openai_base_url') || 'https://api.openai.com/v1';
-    var openAIModel = localStorage.getItem('plants_openai_model') || 'gpt-4.1-mini';
-    if (openAIKey) {
+    html += '<div class="sync-section-title">🔑 AI 植物识别（免费）</div>';
+    html += '<div style="font-size:12px; color:var(--gray-400); margin-bottom:8px;">使用 Google Gemini API，免费无需付费</div>';
+    var geminiKey = localStorage.getItem('plants_gemini_key') || '';
+    if (geminiKey) {
       html += '<div class="sync-token-row">';
-      html += '<span class="sync-token-masked">AI****' + openAIKey.slice(-4) + '</span>';
-      html += '<a href="javascript:void(0)" class="sync-clear-link" onclick="App.clearOpenAIConfig()">清除</a>';
+      html += '<span class="sync-token-masked">AI****' + geminiKey.slice(-4) + '</span>';
+      html += '<a href="javascript:void(0)" class="sync-clear-link" onclick="App.clearGeminiKey()">清除</a>';
       html += '</div>';
-      html += '<div style="font-size:12px; color:var(--gray-400); margin-top:6px;">模型：' + escapeHtml(openAIModel) + '</div>';
-      html += '<div style="font-size:12px; color:var(--gray-400); margin-top:2px;">地址：' + escapeHtml(openAIBaseUrl) + '</div>';
     } else {
-      html += '<input type="text" class="sync-token-input" id="openai-base-url-input" placeholder="API Base URL（默认 https://api.openai.com/v1）" value="' + escapeHtml(openAIBaseUrl) + '">';
-      html += '<input type="text" class="sync-token-input" id="openai-model-input" placeholder="模型名（如 gpt-4.1-mini / codex-mini-latest）" value="' + escapeHtml(openAIModel) + '" style="margin-top:8px;">';
-      html += '<input type="text" class="sync-token-input" id="openai-key-input" placeholder="粘贴 OpenAI / CodeX API Key" style="margin-top:8px;">';
-      html += '<div style="font-size:12px; color:var(--gray-400); margin-top:4px;"><a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--green);">获取 API Key →</a></div>';
-      html += '<button class="btn btn-block" style="margin-top:8px;" onclick="App.saveOpenAIConfig()">保存</button>';
+      html += '<input type="text" class="sync-token-input" id="gemini-key-input" placeholder="粘贴 Gemini API Key">';
+      html += '<div style="font-size:12px; color:var(--gray-400); margin-top:4px;"><a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--green);">点此免费获取 Key →</a></div>';
+      html += '<button class="btn btn-block" style="margin-top:8px;" onclick="App.saveGeminiKey()">保存</button>';
     }
     html += '</div>';
 
@@ -531,35 +525,18 @@ var App = (function() {
     openSyncModal();
   }
 
-  function saveOpenAIConfig() {
-    var keyInput = document.getElementById('openai-key-input');
-    var baseUrlInput = document.getElementById('openai-base-url-input');
-    var modelInput = document.getElementById('openai-model-input');
-
-    var key = (keyInput && keyInput.value || '').trim();
-    var baseUrl = (baseUrlInput && baseUrlInput.value || 'https://api.openai.com/v1').trim().replace(/\/+$/, '');
-    var model = (modelInput && modelInput.value || 'gpt-4.1-mini').trim();
-
+  function saveGeminiKey() {
+    var input = document.getElementById('gemini-key-input');
+    var key = (input && input.value || '').trim();
     if (!key) return;
-    if (!baseUrl) baseUrl = 'https://api.openai.com/v1';
-    if (!model) model = 'gpt-4.1-mini';
-
-    localStorage.setItem('plants_openai_key', key);
-    localStorage.setItem('plants_openai_base_url', baseUrl);
-    localStorage.setItem('plants_openai_model', model);
+    localStorage.setItem('plants_gemini_key', key);
     openSyncModal();
   }
 
-  function clearOpenAIConfig() {
-    localStorage.removeItem('plants_openai_key');
-    localStorage.removeItem('plants_openai_base_url');
-    localStorage.removeItem('plants_openai_model');
+  function clearGeminiKey() {
+    localStorage.removeItem('plants_gemini_key');
     openSyncModal();
   }
-
-  // 兼容旧按钮命名
-  function saveGeminiKey() { saveOpenAIConfig(); }
-  function clearGeminiKey() { clearOpenAIConfig(); }
 
   function doExport() {
     Storage.exportData().then(function() {
@@ -638,8 +615,6 @@ var App = (function() {
     syncToCloud: syncToCloud,
     saveSyncToken: saveSyncToken,
     clearSyncToken: clearSyncToken,
-    saveOpenAIConfig: saveOpenAIConfig,
-    clearOpenAIConfig: clearOpenAIConfig,
     saveGeminiKey: saveGeminiKey,
     clearGeminiKey: clearGeminiKey
   };
