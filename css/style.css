@@ -6,13 +6,6 @@
   font-style: normal;
   font-display: swap;
 }
-@font-face {
-  font-family: "得意黑";
-  src: url("../fonts/SmileySans-Oblique.ttf.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
 
 /* ========== 基础变量（水彩自然风） ========== */
 :root {
@@ -51,7 +44,7 @@
 /* ========== 重置 ========== */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: "得意黑", "Smiley Sans", "SmileySans-Oblique", -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-family: "Smiley Sans", "SmileySans-Oblique", -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   background: #fdfcf7;
   color: var(--gray-900);
   line-height: 1.7;
