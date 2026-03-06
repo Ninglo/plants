@@ -1614,10 +1614,10 @@ img[data-photo-id] {
 }
 .chat-bubble {
   max-width: 90%;
-  padding: 14px 18px;
+  padding: 12px 16px;
   border-radius: 20px;
-  font-size: 18px;
-  line-height: 1.8;
+  font-size: 16px;
+  line-height: 1.65;
   word-break: break-word;
   white-space: pre-wrap;
 }
@@ -1654,22 +1654,22 @@ img[data-photo-id] {
 }
 .chat-input {
   flex: 1;
-  padding: 13px 18px;
+  padding: 11px 16px;
   border: 1.5px solid var(--gray-300);
   border-radius: 24px;
-  font-size: 17px;
+  font-size: 15px;
   font-family: inherit;
   outline: none;
   background: var(--white);
 }
 .chat-input:focus { border-color: var(--green); }
 .chat-send-btn {
-  padding: 12px 22px;
+  padding: 10px 18px;
   border-radius: 24px;
   border: none;
   background: linear-gradient(135deg, #8cc848, #70b434);
   color: #fff;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
@@ -1682,12 +1682,12 @@ img[data-photo-id] {
 }
 .chat-extract-btn {
   flex: 1;
-  padding: 12px;
+  padding: 10px;
   border-radius: var(--radius-sm);
   border: 1.5px solid var(--orange);
   background: var(--orange-light);
   color: var(--orange);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   text-align: center;
@@ -1697,9 +1697,9 @@ img[data-photo-id] {
   background: none;
   border: 1.5px solid var(--border);
   color: var(--gray-500);
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-radius: 22px;
-  font-size: 15px;
+  font-size: 13px;
   cursor: pointer;
 }
 .chat-extract-btn:active { opacity: 0.8; }
@@ -1712,7 +1712,7 @@ img[data-photo-id] {
 }
 .chat-extract-field {
   display: flex; gap: 8px;
-  margin-bottom: 8px; font-size: 14px;
+  margin-bottom: 8px; font-size: 13px;
 }
 .chat-extract-label {
   color: var(--gray-500); min-width: 40px;
@@ -1726,7 +1726,16 @@ img[data-photo-id] {
   border-radius: var(--radius-sm);
   background: #ffebee;
   color: #c62828;
-  font-size: 14px;
+  font-size: 13px;
+}
+
+@media (max-width: 480px) {
+  .chat-messages { padding: 16px 12px; gap: 14px; }
+  .chat-bubble { font-size: 15px; line-height: 1.58; padding: 11px 14px; }
+  .chat-input { font-size: 14px; padding: 10px 14px; }
+  .chat-send-btn { font-size: 13px; padding: 9px 14px; }
+  .chat-extract-btn { font-size: 13px; }
+  .chat-new-btn { font-size: 12px; }
 }
 
 /* ========== 笔记本 ========== */

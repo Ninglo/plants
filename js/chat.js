@@ -8,12 +8,12 @@ var Chat = (function() {
   var CHAT_STORAGE = 'plants_chat_messages';
   var CHAT_DISPLAY = 'plants_chat_display'; // 显示用消息（纯文本）
   var CHAT_PLANTS = 'plants_chat_plant_ids';
-  var MAX_MESSAGES = 15; // 超过此数自动精简
-  var MAX_INLINE_PHOTOS = 2; // 降低请求体体积，减少首包等待
-  var MIN_REQUEST_GAP_MS = 1200; // 客户端节流，减少 429
-  var MAX_RETRY = 3;
-  var MAX_CONTEXT_RECORDS = 4; // 每次注入最多 4 条本地知识
-  var MAX_CONTEXT_CHARS = 1400; // 本地知识注入上限，避免请求过大
+  var MAX_MESSAGES = 12; // 超过此数自动精简，减少长上下文等待
+  var MAX_INLINE_PHOTOS = 1; // 仅传 1 张图，降低上传体积
+  var MIN_REQUEST_GAP_MS = 1000; // 客户端节流，减少 429
+  var MAX_RETRY = 2; // 避免手机端长时间等待重试
+  var MAX_CONTEXT_RECORDS = 2; // 每次注入最多 2 条本地知识
+  var MAX_CONTEXT_CHARS = 700; // 本地知识注入上限，避免请求过大
 
   var messages = []; // Gemini contents 格式
   var displayMessages = []; // 纯文本显示记录 [{role, text}]
@@ -502,10 +502,11 @@ var Chat = (function() {
 
   // 构建 Gemini 请求体
   function buildRequestBody(msgs, includePhotos) {
+    var recentMsgs = msgs.length > 10 ? msgs.slice(msgs.length - 10) : msgs;
     var latestPhotoMsgIndex = -1;
     if (includePhotos) {
-      for (var i = msgs.length - 1; i >= 0; i--) {
-        var m = msgs[i];
+      for (var i = recentMsgs.length - 1; i >= 0; i--) {
+        var m = recentMsgs[i];
         if (m.role === 'user' && m.parts && m.parts.some(function(p) { return !!p.inline_data; })) {
           latestPhotoMsgIndex = i;
           break;
@@ -513,7 +514,7 @@ var Chat = (function() {
       }
     }
 
-    var contents = msgs.map(function(msg, idx) {
+    var contents = recentMsgs.map(function(msg, idx) {
       var parts = msg.parts || [];
       if (!includePhotos || idx !== latestPhotoMsgIndex) {
         parts = parts.filter(function(p) { return p.text !== undefined; });
@@ -523,7 +524,7 @@ var Chat = (function() {
       return msg.parts && msg.parts.length > 0;
     });
 
-    var knowledgeContext = buildKnowledgeContext(msgs);
+    var knowledgeContext = buildKnowledgeContext(recentMsgs);
     var systemParts = [{ text: systemPrompt }];
     if (knowledgeContext) systemParts.push({ text: knowledgeContext });
 
