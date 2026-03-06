@@ -69,6 +69,7 @@ var App = (function() {
 
   function renderHome() {
     var stats = Storage.getStats();
+    var records = Storage.getCompleted();
     var html = '';
 
     // 统计卡片
@@ -93,40 +94,150 @@ var App = (function() {
     html += '<button class="btn btn-blue btn-sm" style="flex:1;" onclick="Knowledge.openNoteEditor()">📝 写笔记</button>';
     html += '</div>';
 
-    // 最近记录
-    var recent = Storage.getCompleted();
-    recent.sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
-    recent = recent.slice(0, 5);
-
-    if (recent.length > 0) {
-      html += '<div class="section-title">最近记录</div>';
-      recent.forEach(function(r) {
-        var badgeClass = r.type === 'plant' ? 'badge-plant' : r.type === 'note' ? 'badge-knowledge' : r.type === 'knowledge' ? 'badge-knowledge' : 'badge-ecology';
-        var typeLabel = r.type === 'plant' ? '🌿' : r.type === 'note' ? '📝' : r.type === 'knowledge' ? '📖' : '🔍';
-        var name = r.name || r.title || '未命名';
-
-        var clickHandler = r.type === 'note' ? 'Knowledge.openNoteDetail(\'' + r.id + '\')' : 'App.showDetail(\'' + r.id + '\')';
-        html += '<div class="knowledge-item" onclick="' + clickHandler + '">';
-        if (r.photoIds && r.photoIds[0]) {
-          html += '<img style="width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0;" data-photo-id="' + r.photoIds[0] + '" src="' + Storage.BLANK_IMG + '">';
-        } else {
-          html += '<div class="knowledge-icon ' + (r.type === 'knowledge' ? 'blue' : r.type === 'ecology' ? 'orange' : '') + '" style="background:var(--green-light);">' + typeLabel + '</div>';
-        }
-        html += '<div style="flex:1; min-width:0;">';
-        html += '<div style="font-size:14px; font-weight:500;">' + escapeHtml(name) + '</div>';
-        html += '<div style="font-size:12px; color:var(--gray-500);">' + formatDate(r.createdAt) + '</div>';
-        html += '</div>';
-        html += '<span class="card-type-badge ' + badgeClass + '" style="flex-shrink:0;">' + typeLabel + '</span>';
-        html += '</div>';
-      });
-    } else {
-      html += '<div class="empty-state">';
-      html += '<div class="empty-state-icon">🌱</div>';
-      html += '<div class="empty-state-text">欢迎来到野径手记！<br>点击上方按钮或右下角的相机开始记录</div>';
-      html += '</div>';
-    }
+    html += renderWeeklyProgress(records);
 
     return html;
+  }
+
+  function renderWeeklyProgress(records) {
+    var week = getWeeklyProgress(records || []);
+    var html = '';
+
+    html += '<div class="section-title">';
+    html += '<span>本周进展</span>';
+    html += '<span class="count">' + week.rangeLabel + '</span>';
+    html += '</div>';
+
+    if (week.totalRecords === 0) {
+      html += '<div class="weekly-empty">';
+      html += '<div class="weekly-empty-text">这周还没开始记录，今天拍一张植物照片开始吧</div>';
+      html += '<div class="weekly-empty-actions">';
+      html += '<button class="btn btn-primary btn-sm" style="flex:1;" onclick="Form.openNew(\'plant\')">🌿 记录植物</button>';
+      html += '<button class="btn btn-blue btn-sm" style="flex:1;" onclick="Knowledge.openNoteEditor()">📝 写笔记</button>';
+      html += '</div>';
+      html += '</div>';
+      return html;
+    }
+
+    html += '<div class="weekly-grid">';
+    html += renderWeeklyMetric('新增植物', '+' + week.thisWeekPlants, week.plantsDiff);
+    html += renderWeeklyMetric('新增笔记', '+' + week.thisWeekNotes, week.notesDiff);
+    html += renderWeeklyMetric('新增科数', '+' + week.thisWeekFamilies, week.familiesDiff);
+    html += renderWeeklyMetric('连续记录', week.streak + ' 天', week.streakDiff);
+    html += '</div>';
+
+    return html;
+  }
+
+  function renderWeeklyMetric(label, value, diff) {
+    var diffClass = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+    var diffText = diff > 0 ? '较上周 +' + diff : diff < 0 ? '较上周 ' + diff : '与上周持平';
+    return '<div class="weekly-metric">' +
+      '<div class="weekly-metric-label">' + label + '</div>' +
+      '<div class="weekly-metric-value">' + value + '</div>' +
+      '<div class="weekly-metric-diff ' + diffClass + '">' + diffText + '</div>' +
+      '</div>';
+  }
+
+  function getWeeklyProgress(records) {
+    var now = new Date();
+    var weekStart = startOfWeekMonday(now);
+    var weekEnd = endOfWeek(weekStart);
+    var prevWeekStart = addDays(weekStart, -7);
+
+    var thisWeekRecords = filterRecordsByRange(records, weekStart, weekEnd);
+    var prevWeekRecords = filterRecordsByRange(records, prevWeekStart, addDays(weekEnd, -7));
+
+    var thisWeekPlants = thisWeekRecords.filter(function(r) { return r.type === 'plant'; });
+    var prevWeekPlants = prevWeekRecords.filter(function(r) { return r.type === 'plant'; });
+    var thisWeekNotes = thisWeekRecords.filter(isNoteRecord).length;
+    var prevWeekNotes = prevWeekRecords.filter(isNoteRecord).length;
+
+    return {
+      totalRecords: thisWeekRecords.length,
+      rangeLabel: dateToMonthDay(weekStart) + ' - ' + dateToMonthDay(weekEnd),
+      thisWeekPlants: thisWeekPlants.length,
+      plantsDiff: thisWeekPlants.length - prevWeekPlants.length,
+      thisWeekNotes: thisWeekNotes,
+      notesDiff: thisWeekNotes - prevWeekNotes,
+      thisWeekFamilies: countUniqueFamilies(thisWeekPlants),
+      familiesDiff: countUniqueFamilies(thisWeekPlants) - countUniqueFamilies(prevWeekPlants),
+      streak: getCurrentStreak(records, now),
+      streakDiff: getCurrentStreak(records, now) - getCurrentStreak(records, addDays(now, -7))
+    };
+  }
+
+  function filterRecordsByRange(records, start, end) {
+    return records.filter(function(r) {
+      var d = new Date(r.createdAt);
+      return !isNaN(d.getTime()) && d >= start && d <= end;
+    });
+  }
+
+  function isNoteRecord(record) {
+    return record.type === 'note' || record.type === 'knowledge' || record.type === 'ecology';
+  }
+
+  function countUniqueFamilies(plants) {
+    var families = {};
+    plants.forEach(function(p) {
+      if (p.family) families[p.family] = true;
+    });
+    return Object.keys(families).length;
+  }
+
+  function getCurrentStreak(records, endDate) {
+    var daySet = {};
+    records.forEach(function(r) {
+      if (!r.createdAt) return;
+      var d = new Date(r.createdAt);
+      if (!isNaN(d.getTime())) daySet[toDayKey(d)] = true;
+    });
+
+    var streak = 0;
+    var cursor = startOfDay(endDate);
+    while (daySet[toDayKey(cursor)]) {
+      streak++;
+      cursor = addDays(cursor, -1);
+    }
+    return streak;
+  }
+
+  function startOfWeekMonday(date) {
+    var d = startOfDay(date);
+    var day = d.getDay();
+    var diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d;
+  }
+
+  function endOfWeek(weekStart) {
+    var d = addDays(weekStart, 6);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }
+
+  function startOfDay(date) {
+    var d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  function addDays(date, days) {
+    var d = new Date(date);
+    d.setDate(d.getDate() + days);
+    return d;
+  }
+
+  function toDayKey(date) {
+    var d = new Date(date);
+    var month = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + month + '-' + day;
+  }
+
+  function dateToMonthDay(date) {
+    return String(date.getMonth() + 1).padStart(2, '0') + '/' + String(date.getDate()).padStart(2, '0');
   }
 
   function renderObservedList() {

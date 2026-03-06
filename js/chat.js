@@ -9,6 +9,11 @@ var Chat = (function() {
   var CHAT_DISPLAY = 'plants_chat_display'; // 显示用消息（纯文本）
   var CHAT_PLANTS = 'plants_chat_plant_ids';
   var MAX_MESSAGES = 15; // 超过此数自动精简
+  var MAX_INLINE_PHOTOS = 2; // 降低请求体体积，减少首包等待
+  var MIN_REQUEST_GAP_MS = 1200; // 客户端节流，减少 429
+  var MAX_RETRY = 3;
+  var MAX_CONTEXT_RECORDS = 4; // 每次注入最多 4 条本地知识
+  var MAX_CONTEXT_CHARS = 1400; // 本地知识注入上限，避免请求过大
 
   var messages = []; // Gemini contents 格式
   var displayMessages = []; // 纯文本显示记录 [{role, text}]
@@ -17,9 +22,210 @@ var Chat = (function() {
   var isStreaming = false;
   var abortController = null;
   var chatPlantIds = []; // 本轮对话涉及的植物 ID
+  var lastRequestAt = 0;
 
   function getKey() { return localStorage.getItem(KEY_STORAGE) || ''; }
   function hasKey() { return !!getKey(); }
+
+  function wait(ms) {
+    return new Promise(function(resolve) { setTimeout(resolve, ms); });
+  }
+
+  function isRetryableStatus(status) {
+    return status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+  }
+
+  function getRetryDelayMs(attempt, retryAfterHeader) {
+    var fromHeader = Number(retryAfterHeader);
+    if (!isNaN(fromHeader) && fromHeader > 0) return Math.ceil(fromHeader * 1000);
+    var base = Math.min(1000 * Math.pow(2, attempt), 8000);
+    return base + Math.floor(Math.random() * 500);
+  }
+
+  function requestWithRetry(url, body, signal, onRetry) {
+    var attempt = 0;
+
+    function run() {
+      var now = Date.now();
+      var gap = now - lastRequestAt;
+      var delay = gap < MIN_REQUEST_GAP_MS ? (MIN_REQUEST_GAP_MS - gap) : 0;
+
+      return wait(delay).then(function() {
+        if (signal && signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        lastRequestAt = Date.now();
+        return fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: signal
+        });
+      }).then(function(response) {
+        if (isRetryableStatus(response.status) && attempt < MAX_RETRY) {
+          attempt++;
+          var retryMs = getRetryDelayMs(attempt, response.headers.get('retry-after'));
+          if (onRetry) onRetry({ attempt: attempt, max: MAX_RETRY, delayMs: retryMs, status: response.status });
+          return wait(retryMs).then(run);
+        }
+        return response;
+      }).catch(function(err) {
+        if (err.name === 'AbortError') throw err;
+        if (attempt < MAX_RETRY) {
+          attempt++;
+          var retryMs = getRetryDelayMs(attempt, null);
+          if (onRetry) onRetry({ attempt: attempt, max: MAX_RETRY, delayMs: retryMs, status: 0 });
+          return wait(retryMs).then(run);
+        }
+        throw err;
+      });
+    }
+
+    return run();
+  }
+
+  function getTextParts(msg) {
+    if (!msg || !msg.parts) return '';
+    return msg.parts
+      .filter(function(p) { return p && typeof p.text === 'string'; })
+      .map(function(p) { return p.text; })
+      .join('\n');
+  }
+
+  function normalizeText(text) {
+    return (text || '')
+      .toLowerCase()
+      .replace(/[^\u4e00-\u9fa5a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  function extractKeywords(text) {
+    var normalized = normalizeText(text);
+    if (!normalized) return [];
+    var parts = normalized.split(/\s+/).filter(function(t) { return t.length >= 2; });
+    var uniq = {};
+    parts.forEach(function(p) { uniq[p] = true; });
+    return Object.keys(uniq).slice(0, 16);
+  }
+
+  function recordText(record) {
+    return normalizeText([
+      record.name,
+      record.title,
+      record.family,
+      record.genus,
+      record.features,
+      record.content,
+      record.notes,
+      record.observation,
+      record.relatedObjects,
+      record.location,
+      record.obsNote,
+      (record.tags || []).join(' ')
+    ].filter(Boolean).join(' '));
+  }
+
+  function countSharedTags(a, b) {
+    var aTags = (a && a.tags) || [];
+    var bTags = (b && b.tags) || [];
+    if (!aTags.length || !bTags.length) return 0;
+    var map = {};
+    aTags.forEach(function(t) { map[t] = true; });
+    var count = 0;
+    bTags.forEach(function(t) { if (map[t]) count++; });
+    return count;
+  }
+
+  function scoreRecord(record, currentRecord, keywords) {
+    var score = 0;
+    var hay = recordText(record);
+
+    if (currentRecord && record.id === currentRecord.id) score += 100;
+    if (currentRecord && record.type !== 'pending' && record.status !== 'pending') {
+      if (currentRecord.family && record.family && currentRecord.family === record.family) score += 15;
+      if (currentRecord.genus && record.genus && currentRecord.genus === record.genus) score += 18;
+      if (countSharedTags(currentRecord, record) > 0) score += countSharedTags(currentRecord, record) * 6;
+      if ((record.links || []).indexOf(currentRecord.id) !== -1) score += 10;
+      if ((currentRecord.links || []).indexOf(record.id) !== -1) score += 10;
+      if (record.linkedPlantIds && record.linkedPlantIds.indexOf(currentRecord.id) !== -1) score += 14;
+    }
+
+    keywords.forEach(function(k) {
+      if (hay.indexOf(k) !== -1) score += 2;
+    });
+
+    if (record.updatedAt) {
+      var days = Math.floor((Date.now() - new Date(record.updatedAt).getTime()) / (24 * 60 * 60 * 1000));
+      if (!isNaN(days) && days <= 30) score += 3;
+      if (!isNaN(days) && days <= 7) score += 2;
+    }
+
+    return score;
+  }
+
+  function summarizeRecord(record, currentRecord) {
+    var title = record.name || record.title || '未命名记录';
+    var pieces = [];
+    if (record.type) pieces.push('类型:' + record.type);
+    if (record.family) pieces.push('科:' + record.family);
+    if (record.genus) pieces.push('属:' + record.genus);
+    if (record.features) pieces.push('特征:' + record.features);
+    if (record.content) pieces.push('内容:' + String(record.content).slice(0, 80));
+    if (record.notes) pieces.push('笔记:' + String(record.notes).slice(0, 80));
+    if (record.obsNote) pieces.push('观察:' + String(record.obsNote).slice(0, 60));
+    if (record.tags && record.tags.length) pieces.push('标签:' + record.tags.slice(0, 4).join('/'));
+
+    var relation = '';
+    if (currentRecord) {
+      if (record.id === currentRecord.id) relation = '（当前记录）';
+      else if (record.family && currentRecord.family && record.family === currentRecord.family) relation = '（同科）';
+      else if (record.genus && currentRecord.genus && record.genus === currentRecord.genus) relation = '（同属）';
+      else if (record.linkedPlantIds && record.linkedPlantIds.indexOf(currentRecord.id) !== -1) relation = '（关联笔记）';
+    }
+    return title + relation + '｜' + pieces.join('；');
+  }
+
+  function buildKnowledgeContext(msgs) {
+    if (!Storage || !Storage.getCompleted) return '';
+    var all = Storage.getCompleted().filter(function(r) { return r && r.status !== 'pending'; });
+    if (all.length === 0) return '';
+
+    var currentRecord = currentRecordId ? Storage.getById(currentRecordId) : null;
+    var latestUserText = '';
+    for (var i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role === 'user') {
+        latestUserText = getTextParts(msgs[i]);
+        if (latestUserText) break;
+      }
+    }
+    var queryText = latestUserText + '\n' + (currentRecord ? getTextParts({ parts: [{ text: formatObservation(currentRecord) }] }) : '');
+    var keywords = extractKeywords(queryText);
+
+    var ranked = all.map(function(r) {
+      return { record: r, score: scoreRecord(r, currentRecord, keywords) };
+    }).filter(function(x) {
+      return x.score > 0;
+    }).sort(function(a, b) {
+      return b.score - a.score;
+    }).slice(0, MAX_CONTEXT_RECORDS);
+
+    if (ranked.length === 0 && currentRecord) {
+      ranked = [{ record: currentRecord, score: 100 }];
+    }
+    if (ranked.length === 0) return '';
+
+    var lines = [];
+    lines.push('【本地知识库参考（来自用户历史记录）】');
+    lines.push('仅把以下内容当作参考证据；若与当前观察冲突，以当前观察为准并明确说明冲突。');
+    for (var j = 0; j < ranked.length; j++) {
+      lines.push((j + 1) + '. ' + summarizeRecord(ranked[j].record, currentRecord));
+    }
+    lines.push('回答时优先引用以上记录中的一致证据，并区分“已知事实”与“推测”。');
+
+    var context = lines.join('\n');
+    if (context.length > MAX_CONTEXT_CHARS) {
+      context = context.slice(0, MAX_CONTEXT_CHARS) + '\n（本地参考已截断）';
+    }
+    return context;
+  }
 
   // 持久化对话
   function saveChat() {
@@ -78,22 +284,46 @@ var Chat = (function() {
 
   // 构建系统提示词（保留科普深度，同时更有结构）
   function buildSystemPrompt() {
-    return '你是一位专业且耐心的植物学导师。你需要在“可读性”和“知识密度”之间平衡：既要系统科普，也要让对话不散。\n\n' +
-      '核心要求：\n' +
-      '1) 保留植物学科普深度，解释术语、特征意义与判断逻辑。\n' +
-      '2) 允许必要复述用户信息（用于确认），但避免机械重复原句。\n' +
-      '3) 如果对话涉及多株植物，要主动做对比，指出关键异同与鉴别点。\n' +
-      '4) 默认使用简体中文，语气自然，像真实导师对话。\n\n' +
-      '输出结构（建议按以下顺序组织）：\n' +
-      '「观察确认」：先复盘已观察到的关键信息，肯定有效线索。\n' +
-      '「判断思路」：解释目前最可能的分类方向，以及为什么。\n' +
-      '「知识拓展」：补充相关科普（形态学、生态位、分类学常识或野外经验）。\n' +
-      '「下一步观察」：给 2-4 条可执行的补充观察建议。\n\n' +
+    return '你是一位专业、克制、可靠的植物学导师。默认使用简体中文，避免幼稚化表达、口号化修辞和过度煽情。\n\n' +
+      '开场要求：\n' +
+      '每次回复第一句都先用“探险者/探险旅程”语气打招呼并引导进入观察，但要自然简短，不浮夸。\n\n' +
+      '输出格式（严格固定为以下三个小标题，顺序不可变）：\n' +
+      '🍃现有观察\n' +
+      '👀下一步观察\n' +
+      '✨探索边界\n\n' +
+      '观察数据解释规则（必须遵守）：\n' +
+      '- 用户记录可能来自不同部位（叶、花、果、茎）与不同时间阶段（花期前后），可并存。\n' +
+      '- 除非同一观察维度出现直接对立（例如同一枝条同时“对生”且“互生”），否则不要判定“观察矛盾”。\n' +
+      '- 发现潜在冲突时，先给“可能原因”（拍摄角度、样本不是同一株、时期差异），再给验证步骤。\n\n' +
+      '格式禁令（必须遵守）：\n' +
+      '- 禁止使用 Markdown 强调：*, **, #。\n' +
+      '- 全文使用纯文本，不要加粗。\n\n' +
+      '各部分要求：\n' +
+      '【🍃现有观察】\n' +
+      '- 合并“观察确认+判断思路”，但要有层次：先列关键观察，再给分类方向与理由。\n' +
+      '- 允许信息充足时展开到 5-9 个短段，像“逐步复核证据”而不是一句话结论。\n' +
+      '- 重点写清：哪些证据支持判断、哪些证据排除其他方向、哪些地方仍不确定。\n' +
+      '- 可以加入“之前误判的可能原因”与“本轮修正点”，帮助用户建立稳定识别框架。\n' +
+      '- 严格去重：不要机械复述用户原句，不要同一特征来回重复。\n\n' +
+      '【👀下一步观察】\n' +
+      '- 给 3-6 条可立即执行的观察建议，优先能最快缩小鉴定范围的项目。\n' +
+      '- 建议必须具体到“看哪里、怎么看、看到了代表什么”。\n' +
+      '- 必须使用阿拉伯数字编号格式：1. 2. 3. ...（每条单独一行）。\n' +
+      '- 当把握度较高时，最后加 1 个“确认问题”，用于快速坐实或推翻当前判断。\n\n' +
+      '【✨探索边界】\n' +
+      '- 放在最后，补充与当前判断直接相关的知识点（形态学、分类学、生态位或野外经验）。\n' +
+      '- 给用户“可迁移的识别规则”，例如简化口诀、对照要点、常见混淆项。\n' +
+      '- 只写新增信息，不重复前文事实描述。\n' +
+      '- 若信息不足，明确不确定性和缺失证据。\n\n' +
+      '长对话规则：\n' +
+      '- 必须回看前文，主动指出与过往记录的“相似点/不同点”。\n' +
+      '- 若涉及多株植物，做简明对比，只保留高鉴别价值差异。\n\n' +
+      '排版规则（面向手机阅读）：\n' +
+      '- 段落要短，每段尽量 1-3 句。\n' +
+      '- 信息要足，但避免单段过长；需要长解释时拆成多个短段。\n\n' +
       '内容边界：\n' +
-      '- 信息不足时明确指出不确定性，并列出还缺什么信息。\n' +
-      '- 除非用户明确要求直接鉴定，否则优先引导其完成关键观察后再下结论。\n' +
-      '- 用户明确要求“直接告诉我”时，可以给出候选物种，并标注依据与不确定点。\n\n' +
-      '篇幅建议：常规 300-500 字，内容完整但段落清晰。';
+      '- 除非用户明确要求直接鉴定，否则先给分类方向与补充观察路径。\n' +
+      '- 用户明确要求“直接告诉我”时，可给候选物种，并标注依据与不确定点。';
   }
 
   // (buildInitialParts 已合并到 addPlantToChat)
@@ -200,7 +430,7 @@ var Chat = (function() {
 
     // 添加照片
     if (photos && photos.length > 0) {
-      var maxPhotos = Math.min(photos.length, 3);
+      var maxPhotos = Math.min(photos.length, MAX_INLINE_PHOTOS);
       for (var i = 0; i < maxPhotos; i++) {
         if (photos[i]) {
           var match = photos[i].match(/^data:([^;]+);base64,(.+)$/);
@@ -248,11 +478,7 @@ var Chat = (function() {
     var body = buildRequestBody(messages, false);
     body.contents.push({ role: 'user', parts: [{ text: summarizePrompt }] });
 
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    }).then(function(res) {
+    requestWithRetry(url, body, null).then(function(res) {
       return res.json();
     }).then(function(data) {
       var summary = '';
@@ -276,18 +502,34 @@ var Chat = (function() {
 
   // 构建 Gemini 请求体
   function buildRequestBody(msgs, includePhotos) {
-    var contents = msgs.map(function(msg, idx) {
-      if (!includePhotos && idx === 0 && msg.parts) {
-        // 去掉图片 parts，只保留 text
-        var textParts = msg.parts.filter(function(p) { return p.text !== undefined; });
-        return { role: msg.role, parts: textParts };
+    var latestPhotoMsgIndex = -1;
+    if (includePhotos) {
+      for (var i = msgs.length - 1; i >= 0; i--) {
+        var m = msgs[i];
+        if (m.role === 'user' && m.parts && m.parts.some(function(p) { return !!p.inline_data; })) {
+          latestPhotoMsgIndex = i;
+          break;
+        }
       }
-      return msg;
+    }
+
+    var contents = msgs.map(function(msg, idx) {
+      var parts = msg.parts || [];
+      if (!includePhotos || idx !== latestPhotoMsgIndex) {
+        parts = parts.filter(function(p) { return p.text !== undefined; });
+      }
+      return { role: msg.role, parts: parts };
+    }).filter(function(msg) {
+      return msg.parts && msg.parts.length > 0;
     });
+
+    var knowledgeContext = buildKnowledgeContext(msgs);
+    var systemParts = [{ text: systemPrompt }];
+    if (knowledgeContext) systemParts.push({ text: knowledgeContext });
 
     return {
       systemInstruction: {
-        parts: [{ text: systemPrompt }]
+        parts: systemParts
       },
       contents: contents
     };
@@ -314,22 +556,16 @@ var Chat = (function() {
 
     var url = BASE_URL + MODEL + ':streamGenerateContent?alt=sse&key=' + getKey();
 
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildRequestBody(messages, true)),
-      signal: abortController.signal
-    }).then(function(response) {
-      if (response.status === 429) {
-        // 频率限制 — 等 5 秒自动重试
-        if (bubble) bubble.textContent = '请求太快了，5 秒后自动重试...';
-        setTimeout(function() {
-          if (bubble && bubble.parentNode) bubble.parentNode.removeChild(bubble);
-          isStreaming = false;
-          streamResponse();
-        }, 5000);
-        return;
+    requestWithRetry(
+      url,
+      buildRequestBody(messages, true),
+      abortController.signal,
+      function(info) {
+        if (bubble) {
+          bubble.textContent = '请求较多，' + Math.ceil(info.delayMs / 1000) + ' 秒后重试（' + info.attempt + '/' + info.max + '）...';
+        }
       }
+    ).then(function(response) {
       if (!response.ok) {
         return response.json().then(function(err) {
           var errMsg = (err.error && err.error.message) || 'API 请求失败 (' + response.status + ')';
@@ -377,8 +613,7 @@ var Chat = (function() {
                 bubble.textContent = fullText;
                 if (cursorEl) bubble.appendChild(cursorEl);
               }
-              var container = document.getElementById('chat-messages');
-              if (container) container.scrollTop = container.scrollHeight;
+              // 保持当前位置，避免长回复时自动跳到末尾，便于从顶部阅读
             } catch (e) { /* skip parse errors */ }
           }
 
@@ -458,86 +693,34 @@ var Chat = (function() {
       '严格输出 JSON，不要输出任何其他文字。不确定的字段留空字符串。\n' +
       '{"name": "中文正式名（如：山樱花）", "latinName": "完整拉丁学名（如：Cerasus serrulata）", "family": "中文科名+拉丁科名（如：蔷薇科 Rosaceae）", "genus": "中文属名+拉丁属名（如：樱属 Cerasus）", "features": "2-3个核心鉴别特征，用植物学术语", "notes": "1-2句相关知识（生态、文化或分类学意义）"}';
 
-    messages.push({ role: 'user', parts: [{ text: extractPrompt }] });
-    appendMessage('user', '✨ 请帮我整理植物信息...');
-
-    // 流式请求
     isStreaming = true;
     var sendBtn = document.getElementById('chat-send-btn');
     if (sendBtn) sendBtn.disabled = true;
-
-    var bubble = appendMessage('model', '');
-    if (bubble) {
-      var cursor = document.createElement('span');
-      cursor.className = 'chat-typing-cursor';
-      bubble.appendChild(cursor);
-    }
-
     abortController = new AbortController();
-    var fullText = '';
+    var url = BASE_URL + MODEL + ':generateContent?key=' + getKey();
+    var requestMessages = messages.concat([{ role: 'user', parts: [{ text: extractPrompt }] }]);
 
-    var url = BASE_URL + MODEL + ':streamGenerateContent?alt=sse&key=' + getKey();
-
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildRequestBody(messages, false)),
-      signal: abortController.signal
-    }).then(function(response) {
+    requestWithRetry(
+      url,
+      buildRequestBody(requestMessages, false),
+      abortController.signal
+    ).then(function(response) {
       if (!response.ok) {
         return response.json().then(function(err) {
           throw new Error((err.error && err.error.message) || 'API 请求失败');
         });
       }
+      return response.json();
+    }).then(function(data) {
+      if (!data) return;
+      isStreaming = false;
+      if (sendBtn) sendBtn.disabled = false;
 
-      var reader = response.body.getReader();
-      var decoder = new TextDecoder();
-      var buffer = '';
-
-      function readChunk() {
-        reader.read().then(function(result) {
-          if (result.done) {
-            finishExtraction(fullText, bubble);
-            return;
-          }
-
-          buffer += decoder.decode(result.value, { stream: true });
-          var lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (var i = 0; i < lines.length; i++) {
-            var line = lines[i].trim();
-            if (!line.startsWith('data: ')) continue;
-            var data = line.slice(6);
-            if (data === '[DONE]') {
-              finishExtraction(fullText, bubble);
-              return;
-            }
-            try {
-              var parsed = JSON.parse(data);
-              var parts = parsed.candidates && parsed.candidates[0] &&
-                parsed.candidates[0].content && parsed.candidates[0].content.parts;
-              if (parts) {
-                for (var j = 0; j < parts.length; j++) {
-                  if (parts[j].text) fullText += parts[j].text;
-                }
-              }
-              if (bubble) {
-                var cursorEl = bubble.querySelector('.chat-typing-cursor');
-                bubble.textContent = fullText;
-                if (cursorEl) bubble.appendChild(cursorEl);
-              }
-              var container = document.getElementById('chat-messages');
-              if (container) container.scrollTop = container.scrollHeight;
-            } catch (e) {}
-          }
-          readChunk();
-        }).catch(function(err) {
-          if (err.name !== 'AbortError') finishExtraction(fullText, bubble);
-        });
-      }
-
-      readChunk();
+      var text = '';
+      try { text = data.candidates[0].content.parts[0].text || ''; } catch (e) {}
+      var extracted = parseExtractedData(text);
+      if (!extracted) throw new Error('AI 返回的格式无法解析，请再试一次');
+      showExtractConfirmation(extracted);
     }).catch(function(err) {
       isStreaming = false;
       if (sendBtn) sendBtn.disabled = false;
@@ -552,43 +735,21 @@ var Chat = (function() {
     });
   }
 
-  function finishExtraction(text, bubble) {
-    isStreaming = false;
-    var sendBtn = document.getElementById('chat-send-btn');
-    if (sendBtn) sendBtn.disabled = false;
-
-    if (bubble) {
-      var cursor = bubble.querySelector('.chat-typing-cursor');
-      if (cursor) cursor.remove();
-    }
-
-    messages.push({ role: 'model', parts: [{ text: text }] });
-
-    // 尝试解析 JSON
+  function parseExtractedData(text) {
     var jsonStr = text;
     var match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (match) jsonStr = match[1].trim();
 
     try {
-      var extracted = JSON.parse(jsonStr);
-      showExtractConfirmation(extracted);
+      return JSON.parse(jsonStr);
     } catch (e) {
       var match2 = text.match(/\{[\s\S]*\}/);
       if (match2) {
         try {
-          var extracted2 = JSON.parse(match2[0]);
-          showExtractConfirmation(extracted2);
-          return;
+          return JSON.parse(match2[0]);
         } catch (e2) {}
       }
-      var container = document.getElementById('chat-messages');
-      if (container) {
-        var errDiv = document.createElement('div');
-        errDiv.className = 'chat-error';
-        errDiv.textContent = 'AI 返回的格式无法解析，请再试一次';
-        container.appendChild(errDiv);
-        container.scrollTop = container.scrollHeight;
-      }
+      return null;
     }
   }
 
