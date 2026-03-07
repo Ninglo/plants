@@ -304,6 +304,7 @@ var Chat = (function() {
       '- 允许信息充足时展开到 5-9 个短段，像“逐步复核证据”而不是一句话结论。\n' +
       '- 重点写清：哪些证据支持判断、哪些证据排除其他方向、哪些地方仍不确定。\n' +
       '- 可以加入“之前误判的可能原因”与“本轮修正点”，帮助用户建立稳定识别框架。\n' +
+      '- 本节结尾必须单独给出一行：当前最可能名称：中文名（拉丁名）｜置信度：XX%。\n' +
       '- 严格去重：不要机械复述用户原句，不要同一特征来回重复。\n\n' +
       '【👀下一步观察】\n' +
       '- 给 3-6 条可立即执行的观察建议，优先能最快缩小鉴定范围的项目。\n' +
@@ -323,7 +324,8 @@ var Chat = (function() {
       '- 信息要足，但避免单段过长；需要长解释时拆成多个短段。\n\n' +
       '内容边界：\n' +
       '- 除非用户明确要求直接鉴定，否则先给分类方向与补充观察路径。\n' +
-      '- 用户明确要求“直接告诉我”时，可给候选物种，并标注依据与不确定点。';
+      '- 用户明确要求“直接告诉我”时，可给候选物种，并标注依据与不确定点。\n' +
+      '- 即便不完全确定，也必须给出“当前最佳候选名称”，不能只停留在科/属层级。';
   }
 
   // (buildInitialParts 已合并到 addPlantToChat)
@@ -394,7 +396,13 @@ var Chat = (function() {
       });
     }
 
-    // 加载照片并追加这株植物
+    // 同一株植物再次进入时仅续聊，不重复投喂观察与图片
+    var alreadySeeded = chatPlantIds.indexOf(record.id) !== -1;
+    if (alreadySeeded && messages.length > 0) {
+      return;
+    }
+
+    // 首次进入该植物，加载照片并投喂
     var photoIds = record.photoIds || [];
     if (photoIds.length > 0) {
       PhotoDB.getMultiple(photoIds).then(function(results) {
@@ -691,8 +699,10 @@ var Chat = (function() {
     }
 
     var extractPrompt = '根据我们的对话，整理这株植物的鉴定结果。\n' +
-      '严格输出 JSON，不要输出任何其他文字。不确定的字段留空字符串。\n' +
-      '{"name": "中文正式名（如：山樱花）", "latinName": "完整拉丁学名（如：Cerasus serrulata）", "family": "中文科名+拉丁科名（如：蔷薇科 Rosaceae）", "genus": "中文属名+拉丁属名（如：樱属 Cerasus）", "features": "2-3个核心鉴别特征，用植物学术语", "notes": "1-2句相关知识（生态、文化或分类学意义）"}';
+      '严格输出 JSON，不要输出任何其他文字。\n' +
+      'name 字段必须填写：即使不完全确定，也填当前最可能候选中文名；并在 notes 里写清不确定性与依据。\n' +
+      '不确定的其他字段可留空字符串。\n' +
+      '{"name": "中文正式名或当前最可能候选名", "latinName": "完整拉丁学名（未知可空）", "family": "中文科名+拉丁科名（未知可空）", "genus": "中文属名+拉丁属名（未知可空）", "features": "2-3个核心鉴别特征，用植物学术语", "notes": "1-2句相关知识，并说明置信度与不确定点"}';
 
     isStreaming = true;
     var sendBtn = document.getElementById('chat-send-btn');
