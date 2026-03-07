@@ -721,7 +721,9 @@ var Chat = (function() {
       try { text = data.candidates[0].content.parts[0].text || ''; } catch (e) {}
       var extracted = parseExtractedData(text);
       if (!extracted) throw new Error('AI 返回的格式无法解析，请再试一次');
-      showExtractConfirmation(extracted);
+      var normalized = normalizeExtractedData(extracted);
+      if (!normalized) throw new Error('AI 返回的结构不正确，请再试一次');
+      showExtractConfirmation(normalized);
     }).catch(function(err) {
       isStreaming = false;
       if (sendBtn) sendBtn.disabled = false;
@@ -752,6 +754,27 @@ var Chat = (function() {
       }
       return null;
     }
+  }
+
+  function pickField(obj, keys) {
+    if (!obj) return '';
+    for (var i = 0; i < keys.length; i++) {
+      var v = obj[keys[i]];
+      if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+    }
+    return '';
+  }
+
+  function normalizeExtractedData(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    return {
+      name: pickField(raw, ['name', '名称', '中文名', '植物名']),
+      latinName: pickField(raw, ['latinName', '学名', '拉丁名', '拉丁学名']),
+      family: pickField(raw, ['family', '科', '科名']),
+      genus: pickField(raw, ['genus', '属', '属名']),
+      features: pickField(raw, ['features', '特征', '关键特征', '鉴别特征']),
+      notes: pickField(raw, ['notes', '知识', '补充', '说明'])
+    };
   }
 
   function showExtractConfirmation(data) {
@@ -797,6 +820,8 @@ var Chat = (function() {
   function applyExtracted() {
     var data = Chat._pendingExtract;
     if (!data || !currentRecordId) return;
+    var current = Storage.getById(currentRecordId);
+    if (!current) return;
 
     var updates = {};
     if (data.name) updates.name = data.name;
@@ -806,8 +831,14 @@ var Chat = (function() {
     if (data.features) updates.features = data.features;
     if (data.notes) updates.notes = data.notes;
 
-    if (data.name && data.family) {
+    var hasCoreData = !!(data.name || data.family || data.genus || data.features || data.latinName);
+    if (current.type === 'plant' && hasCoreData) {
       updates.status = 'complete';
+    }
+
+    if (Object.keys(updates).length === 0) {
+      alert('这次整理没有提取到可写入字段，请继续聊几轮再试。');
+      return;
     }
 
     Storage.update(currentRecordId, updates);
