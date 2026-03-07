@@ -339,6 +339,8 @@ var Chat = (function() {
     html += '<button class="chat-new-btn" onclick="Chat.newJourney()">🌱 新旅程</button>';
     html += '</div>';
     html += '<div class="chat-input-bar">';
+    html += '<button class="chat-image-btn" onclick="Chat.pickImage()" title="发送图片">🖼️</button>';
+    html += '<input type="file" id="chat-image-input" accept="image/*" style="display:none" onchange="Chat.sendImage(this.files); this.value=\'\';">';
     html += '<input class="chat-input" id="chat-input" placeholder="继续聊聊..." onkeydown="if(event.key===\'Enter\')Chat.send()">';
     html += '<button class="chat-send-btn" id="chat-send-btn" onclick="Chat.send()">发送</button>';
     html += '</div>';
@@ -690,6 +692,49 @@ var Chat = (function() {
     streamResponse();
   }
 
+  function pickImage() {
+    if (isStreaming) return;
+    var input = document.getElementById('chat-image-input');
+    if (input) input.click();
+  }
+
+  function sendImage(files) {
+    if (isStreaming) return;
+    if (!files || !files[0]) return;
+
+    var file = files[0];
+    var input = document.getElementById('chat-input');
+    var caption = (input && input.value || '').trim();
+    if (input) input.value = '';
+
+    Storage.compressImage(file, 1280, 0.82).then(function(dataUrl) {
+      var match = dataUrl && dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (!match) throw new Error('图片格式不支持');
+
+      var text = caption || '请识别这张图片中的植物，并结合我们之前的对话继续判断。';
+      var parts = [
+        { text: text },
+        { inline_data: { mime_type: match[1], data: match[2] } }
+      ];
+
+      messages.push({ role: 'user', parts: parts });
+
+      var displayText = '🖼️ 已发送图片' + (caption ? '：' + caption : '');
+      displayMessages.push({ role: 'user', text: displayText });
+      appendMessage('user', displayText);
+      saveChat();
+      streamResponse();
+    }).catch(function(err) {
+      var container = document.getElementById('chat-messages');
+      if (container) {
+        var errDiv = document.createElement('div');
+        errDiv.className = 'chat-error';
+        errDiv.textContent = err.message || '发送图片失败';
+        container.appendChild(errDiv);
+      }
+    });
+  }
+
   function setExtractBusy(busy) {
     var btn = document.getElementById('chat-extract-btn');
     if (!btn) return;
@@ -1025,6 +1070,8 @@ var Chat = (function() {
   return {
     openChat: openChat,
     send: send,
+    pickImage: pickImage,
+    sendImage: sendImage,
     extractAndApply: extractAndApply,
     applyExtracted: applyExtracted,
     stopStream: stopStream,

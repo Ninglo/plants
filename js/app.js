@@ -512,6 +512,24 @@ var App = (function() {
     }, 100);
   }
 
+  function getAIProvider() {
+    return localStorage.getItem('plants_ai_provider') || 'gemini';
+  }
+
+  function getAIModel(provider) {
+    var p = provider || getAIProvider();
+    if (p === 'siliconflow') {
+      return localStorage.getItem('plants_siliconflow_model') || 'Qwen/Qwen3-VL-8B-Instruct';
+    }
+    return localStorage.getItem('plants_gemini_model') || 'gemini-2.5-flash';
+  }
+
+  function getAIKey(provider) {
+    var p = provider || getAIProvider();
+    if (p === 'siliconflow') return localStorage.getItem('plants_siliconflow_key') || '';
+    return localStorage.getItem('plants_gemini_key') || '';
+  }
+
   // 同步模态
   function openSyncModal() {
     var html = '';
@@ -562,21 +580,50 @@ var App = (function() {
     html += '<div class="sync-result" id="sync-result"></div>';
     html += '</div>';
 
-    // ===== API 密钥区 =====
+    // ===== AI 设置区 =====
     html += '<div class="sync-divider"></div>';
     html += '<div class="sync-section">';
     html += '<div class="sync-section-title">🔑 AI 植物识别（免费）</div>';
-    html += '<div style="font-size:12px; color:var(--gray-400); margin-bottom:8px;">使用 Google Gemini API，免费无需付费</div>';
-    var geminiKey = localStorage.getItem('plants_gemini_key') || '';
-    if (geminiKey) {
-      html += '<div class="sync-token-row">';
-      html += '<span class="sync-token-masked">AI****' + geminiKey.slice(-4) + '</span>';
-      html += '<a href="javascript:void(0)" class="sync-clear-link" onclick="App.clearGeminiKey()">清除</a>';
-      html += '</div>';
+    html += '<div style="font-size:12px; color:var(--gray-400); margin-bottom:8px;">可切换 Gemini / SiliconFlow（大陆更稳）</div>';
+    var provider = getAIProvider();
+    var key = getAIKey(provider);
+
+    html += '<label style="font-size:12px; color:var(--gray-500); display:block; margin-bottom:4px;">AI 通道</label>';
+    html += '<select class="sync-token-input" id="ai-provider-select" onchange="App.setAIProvider(this.value)" style="height:42px;">';
+    html += '<option value="gemini"' + (provider === 'gemini' ? ' selected' : '') + '>Google Gemini</option>';
+    html += '<option value="siliconflow"' + (provider === 'siliconflow' ? ' selected' : '') + '>SiliconFlow（推荐）</option>';
+    html += '</select>';
+
+    html += '<label style="font-size:12px; color:var(--gray-500); display:block; margin:10px 0 4px;">模型</label>';
+    if (provider === 'siliconflow') {
+      var sfModel = getAIModel('siliconflow');
+      html += '<select class="sync-token-input" id="ai-model-select" style="height:42px;">';
+      html += '<option value="Qwen/Qwen3-VL-8B-Instruct"' + (sfModel === 'Qwen/Qwen3-VL-8B-Instruct' ? ' selected' : '') + '>Qwen3-VL-8B（均衡）</option>';
+      html += '<option value="Qwen/Qwen2.5-VL-32B-Instruct"' + (sfModel === 'Qwen/Qwen2.5-VL-32B-Instruct' ? ' selected' : '') + '>Qwen2.5-VL-32B（更强）</option>';
+      html += '<option value="deepseek-ai/deepseek-vl2"' + (sfModel === 'deepseek-ai/deepseek-vl2' ? ' selected' : '') + '>DeepSeek-VL2（更快）</option>';
+      html += '</select>';
     } else {
-      html += '<input type="text" class="sync-token-input" id="gemini-key-input" placeholder="粘贴 Gemini API Key">';
-      html += '<div style="font-size:12px; color:var(--gray-400); margin-top:4px;"><a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--green);">点此免费获取 Key →</a></div>';
-      html += '<button class="btn btn-block" style="margin-top:8px;" onclick="App.saveGeminiKey()">保存</button>';
+      html += '<select class="sync-token-input" id="ai-model-select" style="height:42px;">';
+      html += '<option value="gemini-2.5-flash"' + (getAIModel('gemini') === 'gemini-2.5-flash' ? ' selected' : '') + '>gemini-2.5-flash</option>';
+      html += '</select>';
+    }
+
+    if (key) {
+      html += '<div class="sync-token-row">';
+      html += '<span class="sync-token-masked">AI****' + key.slice(-4) + '</span>';
+      html += '<a href="javascript:void(0)" class="sync-clear-link" onclick="App.clearAIKey()">清除</a>';
+      html += '</div>';
+      html += '<button class="btn btn-block" style="margin-top:8px;" onclick="App.saveAIConfig()">保存模型设置</button>';
+    } else {
+      html += '<input type="text" class="sync-token-input" id="ai-key-input" placeholder="' + (provider === 'siliconflow' ? '粘贴 SiliconFlow API Key' : '粘贴 Gemini API Key') + '">';
+      html += '<div style="font-size:12px; color:var(--gray-400); margin-top:4px;">';
+      if (provider === 'siliconflow') {
+        html += '<a href="https://siliconflow.cn" target="_blank" style="color:var(--green);">前往 SiliconFlow 获取 Key →</a>';
+      } else {
+        html += '<a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--green);">前往 Gemini 获取 Key →</a>';
+      }
+      html += '</div>';
+      html += '<button class="btn btn-block" style="margin-top:8px;" onclick="App.saveAIConfig()">保存</button>';
     }
     html += '</div>';
 
@@ -636,18 +683,39 @@ var App = (function() {
     openSyncModal();
   }
 
-  function saveGeminiKey() {
-    var input = document.getElementById('gemini-key-input');
-    var key = (input && input.value || '').trim();
-    if (!key) return;
-    localStorage.setItem('plants_gemini_key', key);
+  function setAIProvider(provider) {
+    if (provider !== 'gemini' && provider !== 'siliconflow') return;
+    localStorage.setItem('plants_ai_provider', provider);
     openSyncModal();
   }
 
-  function clearGeminiKey() {
-    localStorage.removeItem('plants_gemini_key');
+  function saveAIConfig() {
+    var provider = getAIProvider();
+    var keyInput = document.getElementById('ai-key-input');
+    var modelInput = document.getElementById('ai-model-select');
+    var key = (keyInput && keyInput.value || '').trim();
+    var model = (modelInput && modelInput.value || '').trim();
+
+    if (provider === 'siliconflow') {
+      if (key) localStorage.setItem('plants_siliconflow_key', key);
+      if (model) localStorage.setItem('plants_siliconflow_model', model);
+    } else {
+      if (key) localStorage.setItem('plants_gemini_key', key);
+      if (model) localStorage.setItem('plants_gemini_model', model);
+    }
     openSyncModal();
   }
+
+  function clearAIKey() {
+    var provider = getAIProvider();
+    if (provider === 'siliconflow') localStorage.removeItem('plants_siliconflow_key');
+    else localStorage.removeItem('plants_gemini_key');
+    openSyncModal();
+  }
+
+  // 兼容旧按钮调用
+  function saveGeminiKey() { saveAIConfig(); }
+  function clearGeminiKey() { clearAIKey(); }
 
   function doExport() {
     Storage.exportData().then(function() {
@@ -726,6 +794,9 @@ var App = (function() {
     syncToCloud: syncToCloud,
     saveSyncToken: saveSyncToken,
     clearSyncToken: clearSyncToken,
+    setAIProvider: setAIProvider,
+    saveAIConfig: saveAIConfig,
+    clearAIKey: clearAIKey,
     saveGeminiKey: saveGeminiKey,
     clearGeminiKey: clearGeminiKey
   };
