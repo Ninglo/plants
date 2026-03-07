@@ -335,7 +335,7 @@ var Chat = (function() {
     var html = '<div class="chat-container">';
     html += '<div class="chat-messages" id="chat-messages"></div>';
     html += '<div class="chat-bottom-bar">';
-    html += '<button class="chat-extract-btn" onclick="Chat.extractAndApply()">✨ 确认整理</button>';
+    html += '<button class="chat-extract-btn" id="chat-extract-btn" onclick="Chat.extractAndApply()">✨ 确认整理</button>';
     html += '<button class="chat-new-btn" onclick="Chat.newJourney()">🌱 新旅程</button>';
     html += '</div>';
     html += '<div class="chat-input-bar">';
@@ -690,6 +690,34 @@ var Chat = (function() {
     streamResponse();
   }
 
+  function setExtractBusy(busy) {
+    var btn = document.getElementById('chat-extract-btn');
+    if (!btn) return;
+    btn.disabled = !!busy;
+    btn.textContent = busy ? '⏳ 整理中...' : '✨ 确认整理';
+  }
+
+  function showExtractLoading(text) {
+    var container = document.getElementById('chat-messages');
+    if (!container) return;
+    var existing = document.getElementById('chat-extract-loading');
+    if (existing) {
+      existing.textContent = text || '正在整理本轮对话，请稍候...';
+      return;
+    }
+    var div = document.createElement('div');
+    div.id = 'chat-extract-loading';
+    div.className = 'chat-loading';
+    div.textContent = text || '正在整理本轮对话，请稍候...';
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function hideExtractLoading() {
+    var el = document.getElementById('chat-extract-loading');
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  }
+
   // 确认整理 - 提取结构化数据
   function extractAndApply() {
     if (isStreaming) return;
@@ -707,6 +735,8 @@ var Chat = (function() {
     isStreaming = true;
     var sendBtn = document.getElementById('chat-send-btn');
     if (sendBtn) sendBtn.disabled = true;
+    setExtractBusy(true);
+    showExtractLoading('正在整理本轮对话，请稍候...');
     abortController = new AbortController();
     var url = BASE_URL + MODEL + ':generateContent?key=' + getKey();
     var requestMessages = messages.concat([{ role: 'user', parts: [{ text: extractPrompt }] }]);
@@ -714,7 +744,10 @@ var Chat = (function() {
     requestWithRetry(
       url,
       buildRequestBody(requestMessages, false),
-      abortController.signal
+      abortController.signal,
+      function(info) {
+        showExtractLoading('请求较多，' + Math.ceil(info.delayMs / 1000) + ' 秒后重试（' + info.attempt + '/' + info.max + '）...');
+      }
     ).then(function(response) {
       if (!response.ok) {
         return response.json().then(function(err) {
@@ -726,6 +759,8 @@ var Chat = (function() {
       if (!data) return;
       isStreaming = false;
       if (sendBtn) sendBtn.disabled = false;
+      setExtractBusy(false);
+      hideExtractLoading();
 
       var text = '';
       try { text = data.candidates[0].content.parts[0].text || ''; } catch (e) {}
@@ -737,6 +772,8 @@ var Chat = (function() {
     }).catch(function(err) {
       isStreaming = false;
       if (sendBtn) sendBtn.disabled = false;
+      setExtractBusy(false);
+      hideExtractLoading();
       if (err.name === 'AbortError') return;
       var container = document.getElementById('chat-messages');
       if (container) {

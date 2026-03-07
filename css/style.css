@@ -1693,6 +1693,10 @@ img[data-photo-id] {
   text-align: center;
   font-family: inherit;
 }
+.chat-extract-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .chat-new-btn {
   background: none;
   border: 1.5px solid var(--border);
@@ -1727,6 +1731,15 @@ img[data-photo-id] {
   background: #ffebee;
   color: #c62828;
   font-size: 13px;
+}
+.chat-loading {
+  margin: 0 18px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--yellow-light);
+  color: var(--gray-700);
+  font-size: 13px;
+  border: 1px solid rgba(224, 184, 92, 0.35);
 }
 
 @media (max-width: 480px) {
