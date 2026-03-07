@@ -44,6 +44,10 @@ var Chat = (function() {
 
   function hasKey() { return !!getKey(); }
 
+  function getProviderLabel() {
+    return getProvider() === 'siliconflow' ? 'SiliconFlow' : 'Gemini';
+  }
+
   function wait(ms) {
     return new Promise(function(resolve) { setTimeout(resolve, ms); });
   }
@@ -375,6 +379,7 @@ var Chat = (function() {
   // 渲染聊天界面
   function renderChatUI() {
     var html = '<div class="chat-container">';
+    html += '<div class="chat-provider-status">当前 AI：' + getProviderLabel() + ' · ' + getModel() + '</div>';
     html += '<div class="chat-messages" id="chat-messages"></div>';
     html += '<div class="chat-bottom-bar">';
     html += '<button class="chat-extract-btn" id="chat-extract-btn" onclick="Chat.extractAndApply()">✨ 确认整理</button>';
