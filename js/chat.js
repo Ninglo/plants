@@ -1,9 +1,9 @@
 var Chat = (function() {
   'use strict';
 
-  var MODEL = 'gemini-2.5-flash';
-  var BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
-  var KEY_STORAGE = 'plants_gemini_key';
+  var GEMINI_MODEL = 'gemini-2.5-flash';
+  var GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
+  var SILICONFLOW_URL = 'https://api.siliconflow.cn/v1/chat/completions';
 
   var CHAT_STORAGE = 'plants_chat_messages';
   var CHAT_DISPLAY = 'plants_chat_display'; // 显示用消息（纯文本）
@@ -24,7 +24,24 @@ var Chat = (function() {
   var chatPlantIds = []; // 本轮对话涉及的植物 ID
   var lastRequestAt = 0;
 
-  function getKey() { return localStorage.getItem(KEY_STORAGE) || ''; }
+  function getProvider() {
+    return localStorage.getItem('plants_ai_provider') || 'gemini';
+  }
+
+  function getModel() {
+    if (getProvider() === 'siliconflow') {
+      return localStorage.getItem('plants_siliconflow_model') || 'Qwen/Qwen3-VL-8B-Instruct';
+    }
+    return localStorage.getItem('plants_gemini_model') || GEMINI_MODEL;
+  }
+
+  function getKey() {
+    if (getProvider() === 'siliconflow') {
+      return localStorage.getItem('plants_siliconflow_key') || '';
+    }
+    return localStorage.getItem('plants_gemini_key') || '';
+  }
+
   function hasKey() { return !!getKey(); }
 
   function wait(ms) {
@@ -42,7 +59,7 @@ var Chat = (function() {
     return base + Math.floor(Math.random() * 500);
   }
 
-  function requestWithRetry(url, body, signal, onRetry) {
+  function requestWithRetry(url, body, signal, onRetry, extraHeaders) {
     var attempt = 0;
 
     function run() {
@@ -55,7 +72,7 @@ var Chat = (function() {
         lastRequestAt = Date.now();
         return fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: Object.assign({ 'Content-Type': 'application/json' }, extraHeaders || {}),
           body: JSON.stringify(body),
           signal: signal
         });
@@ -80,6 +97,31 @@ var Chat = (function() {
     }
 
     return run();
+  }
+
+  function getProviderHeaders() {
+    if (getProvider() === 'siliconflow') {
+      return { Authorization: 'Bearer ' + getKey() };
+    }
+    return {};
+  }
+
+  function extractResponseText(data) {
+    try {
+      if (data && data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content || '';
+      }
+      if (data && data.candidates && data.candidates[0] &&
+          data.candidates[0].content && data.candidates[0].content.parts) {
+        var parts = data.candidates[0].content.parts;
+        var out = '';
+        for (var i = 0; i < parts.length; i++) {
+          if (parts[i].text) out += parts[i].text;
+        }
+        return out;
+      }
+    } catch (e) {}
+    return '';
   }
 
   function getTextParts(msg) {
@@ -483,16 +525,15 @@ var Chat = (function() {
       '保留每株植物的：关键观察特征、初步分类方向、待观察要点。\n' +
       '严格只输出总结文本，不要输出其他内容。';
 
-    var url = BASE_URL + MODEL + ':generateContent?key=' + getKey();
+    var isSF = getProvider() === 'siliconflow';
+    var url = isSF ? SILICONFLOW_URL : (GEMINI_BASE_URL + getModel() + ':generateContent?key=' + getKey());
+    var requestMessages = messages.concat([{ role: 'user', parts: [{ text: summarizePrompt }] }]);
+    var body = buildRequestBody(requestMessages, false);
 
-    var body = buildRequestBody(messages, false);
-    body.contents.push({ role: 'user', parts: [{ text: summarizePrompt }] });
-
-    requestWithRetry(url, body, null).then(function(res) {
+    requestWithRetry(url, body, null, null, getProviderHeaders()).then(function(res) {
       return res.json();
     }).then(function(data) {
-      var summary = '';
-      try { summary = data.candidates[0].content.parts[0].text; } catch (e) {}
+      var summary = extractResponseText(data);
       if (summary) {
         // 用精简后的内容替换旧消息
         messages = [
@@ -535,13 +576,36 @@ var Chat = (function() {
     });
 
     var knowledgeContext = buildKnowledgeContext(recentMsgs);
+    if (getProvider() === 'siliconflow') {
+      var sysText = systemPrompt + (knowledgeContext ? '\n\n' + knowledgeContext : '');
+      var sfMessages = [{ role: 'system', content: sysText }];
+      contents.forEach(function(msg, idx) {
+        var role = msg.role === 'model' ? 'assistant' : msg.role;
+        var openaiContent = [];
+        (msg.parts || []).forEach(function(p) {
+          if (p.text !== undefined) {
+            openaiContent.push({ type: 'text', text: p.text });
+          } else if (includePhotos && idx === latestPhotoMsgIndex && p.inline_data && p.inline_data.data) {
+            openaiContent.push({
+              type: 'image_url',
+              image_url: { url: 'data:' + p.inline_data.mime_type + ';base64,' + p.inline_data.data }
+            });
+          }
+        });
+        if (openaiContent.length > 0) sfMessages.push({ role: role, content: openaiContent });
+      });
+      return {
+        model: getModel(),
+        temperature: 0.2,
+        max_tokens: 900,
+        messages: sfMessages
+      };
+    }
+
     var systemParts = [{ text: systemPrompt }];
     if (knowledgeContext) systemParts.push({ text: knowledgeContext });
-
     return {
-      systemInstruction: {
-        parts: systemParts
-      },
+      systemInstruction: { parts: systemParts },
       contents: contents
     };
   }
@@ -565,7 +629,10 @@ var Chat = (function() {
     abortController = new AbortController();
     var fullText = '';
 
-    var url = BASE_URL + MODEL + ':streamGenerateContent?alt=sse&key=' + getKey();
+    var usingSF = getProvider() === 'siliconflow';
+    var url = usingSF
+      ? SILICONFLOW_URL
+      : (GEMINI_BASE_URL + getModel() + ':streamGenerateContent?alt=sse&key=' + getKey());
 
     requestWithRetry(
       url,
@@ -575,12 +642,22 @@ var Chat = (function() {
         if (bubble) {
           bubble.textContent = '请求较多，' + Math.ceil(info.delayMs / 1000) + ' 秒后重试（' + info.attempt + '/' + info.max + '）...';
         }
-      }
+      },
+      getProviderHeaders()
     ).then(function(response) {
       if (!response.ok) {
         return response.json().then(function(err) {
-          var errMsg = (err.error && err.error.message) || 'API 请求失败 (' + response.status + ')';
+          var errMsg = (err.error && err.error.message) || err.message || 'API 请求失败 (' + response.status + ')';
           throw new Error(errMsg);
+        });
+      }
+
+      if (usingSF) {
+        return response.json().then(function(data) {
+          var text = extractResponseText(data);
+          if (!text) throw new Error('AI 返回为空');
+          if (bubble) bubble.textContent = text;
+          finishStream(text, bubble);
         });
       }
 
@@ -783,7 +860,8 @@ var Chat = (function() {
     setExtractBusy(true);
     showExtractLoading('正在整理本轮对话，请稍候...');
     abortController = new AbortController();
-    var url = BASE_URL + MODEL + ':generateContent?key=' + getKey();
+    var isSF = getProvider() === 'siliconflow';
+    var url = isSF ? SILICONFLOW_URL : (GEMINI_BASE_URL + getModel() + ':generateContent?key=' + getKey());
     var requestMessages = messages.concat([{ role: 'user', parts: [{ text: extractPrompt }] }]);
 
     requestWithRetry(
@@ -792,7 +870,8 @@ var Chat = (function() {
       abortController.signal,
       function(info) {
         showExtractLoading('请求较多，' + Math.ceil(info.delayMs / 1000) + ' 秒后重试（' + info.attempt + '/' + info.max + '）...');
-      }
+      },
+      getProviderHeaders()
     ).then(function(response) {
       if (!response.ok) {
         return response.json().then(function(err) {
@@ -807,8 +886,7 @@ var Chat = (function() {
       setExtractBusy(false);
       hideExtractLoading();
 
-      var text = '';
-      try { text = data.candidates[0].content.parts[0].text || ''; } catch (e) {}
+      var text = extractResponseText(data);
       var extracted = parseExtractedData(text);
       if (!extracted) throw new Error('AI 返回的格式无法解析，请再试一次');
       var normalized = normalizeExtractedData(extracted);
