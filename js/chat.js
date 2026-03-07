@@ -23,6 +23,7 @@ var Chat = (function() {
   var abortController = null;
   var chatPlantIds = []; // 本轮对话涉及的植物 ID
   var lastRequestAt = 0;
+  var viewportBound = false;
 
   function getProvider() {
     return localStorage.getItem('plants_ai_provider') || 'gemini';
@@ -46,6 +47,44 @@ var Chat = (function() {
 
   function getProviderLabel() {
     return getProvider() === 'siliconflow' ? 'SiliconFlow' : 'Gemini';
+  }
+
+  function updateChatViewportHeight() {
+    var h = window.visualViewport ? Math.floor(window.visualViewport.height) : window.innerHeight;
+    document.documentElement.style.setProperty('--chat-vvh', h + 'px');
+  }
+
+  function bindChatViewport() {
+    if (viewportBound) return;
+    updateChatViewportHeight();
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateChatViewportHeight);
+      window.visualViewport.addEventListener('scroll', updateChatViewportHeight);
+    }
+    window.addEventListener('orientationchange', updateChatViewportHeight);
+    viewportBound = true;
+  }
+
+  function unbindChatViewport() {
+    if (!viewportBound) return;
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', updateChatViewportHeight);
+      window.visualViewport.removeEventListener('scroll', updateChatViewportHeight);
+    }
+    window.removeEventListener('orientationchange', updateChatViewportHeight);
+    document.documentElement.style.removeProperty('--chat-vvh');
+    viewportBound = false;
+  }
+
+  function setupInputFocusBehavior() {
+    var input = document.getElementById('chat-input');
+    if (!input) return;
+    input.addEventListener('focus', function() {
+      setTimeout(function() {
+        updateChatViewportHeight();
+        input.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }, 120);
+    });
   }
 
   function wait(ms) {
@@ -433,10 +472,13 @@ var Chat = (function() {
     document.getElementById('modal-title').textContent = '📋 植物观察之旅';
 
     var overlay = document.getElementById('modal-overlay');
+    overlay.classList.add('chat-mode');
     if (!overlay.classList.contains('show')) {
       overlay.classList.add('show');
       document.body.style.overflow = 'hidden';
     }
+    bindChatViewport();
+    setupInputFocusBehavior();
 
     // 如果已有对话历史，先恢复显示
     if (displayMessages.length > 0) {
@@ -1150,6 +1192,12 @@ var Chat = (function() {
     isStreaming = false;
   }
 
+  function onModalClosed() {
+    unbindChatViewport();
+    var overlay = document.getElementById('modal-overlay');
+    if (overlay) overlay.classList.remove('chat-mode');
+  }
+
   return {
     openChat: openChat,
     send: send,
@@ -1158,6 +1206,7 @@ var Chat = (function() {
     extractAndApply: extractAndApply,
     applyExtracted: applyExtracted,
     stopStream: stopStream,
+    onModalClosed: onModalClosed,
     hasKey: hasKey,
     newJourney: newJourney,
     handleCelebrationTagKey: handleCelebrationTagKey,

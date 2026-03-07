@@ -756,6 +756,9 @@ var App = (function() {
   function closeModal() {
     document.getElementById('modal-overlay').classList.remove('show');
     document.body.style.overflow = '';
+    if (window.Chat && typeof Chat.onModalClosed === 'function') {
+      Chat.onModalClosed();
+    }
   }
 
   function refreshView() {
