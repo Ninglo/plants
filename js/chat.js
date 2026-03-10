@@ -415,12 +415,14 @@ var Chat = (function() {
   // 渲染聊天界面
   function renderChatUI() {
     var html = '<div class="chat-container">';
-    html += '<div class="chat-provider-status">当前 AI：' + getProviderLabel() + ' · ' + getModel() + '</div>';
-    html += '<div class="chat-messages" id="chat-messages"></div>';
-    html += '<div class="chat-bottom-bar">';
-    html += '<button class="chat-extract-btn" id="chat-extract-btn" onclick="Chat.extractAndApply()">✨ 确认整理</button>';
+    html += '<div class="chat-provider-status">';
+    html += '<span class="chat-provider-label">当前 AI：' + getProviderLabel() + ' · ' + getModel() + '</span>';
+    html += '<div class="chat-top-actions">';
+    html += '<button class="chat-extract-btn" id="chat-extract-btn" onclick="Chat.extractAndApply()">✨ 整理</button>';
     html += '<button class="chat-new-btn" onclick="Chat.newJourney()">🌱 新旅程</button>';
     html += '</div>';
+    html += '</div>';
+    html += '<div class="chat-messages" id="chat-messages"></div>';
     html += '<div class="chat-input-bar">';
     html += '<button class="chat-image-btn" onclick="Chat.pickImage()" title="发送图片">🖼️</button>';
     html += '<input type="file" id="chat-image-input" accept="image/*" style="display:none" onchange="Chat.sendImage(this.files); this.value=\'\';">';
