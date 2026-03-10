@@ -1607,7 +1607,7 @@ img[data-photo-id] {
   display: flex;
   flex-direction: column;
   height: calc(var(--chat-vvh, 88vh) - 60px);
-  margin: -18px -18px 0;
+  margin: 0;
 }
 .chat-provider-status {
   padding: 8px 14px;

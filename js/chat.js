@@ -80,11 +80,7 @@ var Chat = (function() {
     var input = document.getElementById('chat-input');
     if (!input) return;
     input.addEventListener('focus', function() {
-      setTimeout(function() {
-        updateChatViewportHeight();
-        var msgs = document.getElementById('chat-messages');
-        if (msgs) msgs.scrollTop = msgs.scrollHeight;
-      }, 300);
+      setTimeout(updateChatViewportHeight, 300);
     });
   }
 

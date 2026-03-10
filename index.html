@@ -12,7 +12,7 @@
   <script>
     // 自动检测新版本：即使 index.html 被缓存，也能发现更新并刷新
     (function() {
-      var LOCAL_VER = 50;
+      var LOCAL_VER = 51;
       fetch('version.txt?_=' + Date.now()).then(function(r) {
         return r.text();
       }).then(function(v) {
