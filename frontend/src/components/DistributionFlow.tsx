@@ -1,8 +1,10 @@
-import { useState, useRef } from 'react';
-import type { ClassInfo, Module, StudentData, MPBreakdown, SchemeId, BonusItem } from '../types';
-import { parseBasicFile, parseDailyCheckFile, generateOutputExcel } from '../utils/parseExcel';
+import { useState, useRef, useEffect } from 'react';
+import type { ClassInfo, Module, StudentData, MPBreakdown, SchemeId, BonusItem, SavedCustomScheme } from '../types';
+import { parseBasicFile, parseDailyCheckFile } from '../utils/parseExcel';
 import { calculateMP, SCHEMES } from '../utils/calculateMP';
 import { getCurrentWeek } from '../utils/weekNumber';
+import { loadSavedSchemes, saveScheme, deleteScheme } from '../utils/customScheme';
+import CustomSchemeEditor from './CustomSchemeEditor';
 import ResultView from './ResultView';
 import './DistributionFlow.css';
 
@@ -36,6 +38,7 @@ export default function DistributionFlow({ classInfo, onBack }: Props) {
   const [dailyFile, setDailyFile] = useState<File | null>(null);
   const [students, setStudents] = useState<StudentData[]>([]);
   const [scheme, setScheme] = useState<SchemeId>('scheme1');
+  const [customSchemeData, setCustomSchemeData] = useState<SavedCustomScheme | undefined>();
   const [dailyRate, setDailyRate] = useState(0.1);
   const [defaultParticipation, setDefaultParticipation] = useState(0.2);
   const [bonusItems, setBonusItems] = useState<BonusItem[]>([]);
@@ -86,7 +89,7 @@ export default function DistributionFlow({ classInfo, onBack }: Props) {
       ...s,
       bonusItems: bonusItems.filter((b) => b.studentIds.includes(s.studentId)),
     }));
-    const results = calculateMP(studWithBonus, scheme, dailyRate, selectedModules);
+    const results = calculateMP(studWithBonus, scheme, dailyRate, selectedModules, customSchemeData);
     setMpResults(results);
     setStep(4);
   }
@@ -155,11 +158,12 @@ export default function DistributionFlow({ classInfo, onBack }: Props) {
         <StepPreview
           students={students}
           scheme={scheme}
+          customSchemeData={customSchemeData}
           dailyRate={dailyRate}
           defaultParticipation={defaultParticipation}
           bonusItems={bonusItems}
           modules={selectedModules}
-          onSchemeChange={setScheme}
+          onSchemeChange={(id, data) => { setScheme(id); setCustomSchemeData(data); }}
           onDailyRateChange={setDailyRate}
           onParticipationChange={(sid, val) => {
             setStudents((prev) =>
@@ -323,6 +327,7 @@ function UploadField({
 function StepPreview({
   students,
   scheme,
+  customSchemeData,
   dailyRate,
   defaultParticipation,
   bonusItems,
@@ -339,11 +344,12 @@ function StepPreview({
 }: {
   students: StudentData[];
   scheme: SchemeId;
+  customSchemeData: SavedCustomScheme | undefined;
   dailyRate: number;
   defaultParticipation: number;
   bonusItems: BonusItem[];
   modules: Set<Module>;
-  onSchemeChange: (s: SchemeId) => void;
+  onSchemeChange: (id: SchemeId, data?: SavedCustomScheme) => void;
   onDailyRateChange: (v: number) => void;
   onParticipationChange: (sid: string, val: number) => void;
   onBulkParticipation: (sids: string[], val: number) => void;
@@ -359,6 +365,14 @@ function StepPreview({
   const [bonusAmount, setBonusAmount] = useState('');
   const [bonusStudents, setBonusStudents] = useState<Set<string>>(new Set());
   const [bonusError, setBonusError] = useState('');
+
+  const [savedSchemes, setSavedSchemes] = useState<SavedCustomScheme[]>([]);
+  const [showEditor, setShowEditor] = useState(false);
+  const [editingScheme, setEditingScheme] = useState<SavedCustomScheme | undefined>();
+
+  useEffect(() => {
+    setSavedSchemes(loadSavedSchemes());
+  }, []);
 
   function toggleStudent(sid: string) {
     setSelectedSids((prev) => {
@@ -390,6 +404,31 @@ function StepPreview({
     setBonusStudents(new Set());
   }
 
+  function handleSaveCustomScheme(s: SavedCustomScheme) {
+    saveScheme(s);
+    const updated = loadSavedSchemes();
+    setSavedSchemes(updated);
+    setShowEditor(false);
+    setEditingScheme(undefined);
+    onSchemeChange(s.id, s);
+  }
+
+  function handleDeleteScheme(id: string) {
+    deleteScheme(id);
+    setSavedSchemes(loadSavedSchemes());
+    if (scheme === id) onSchemeChange('scheme1', undefined);
+  }
+
+  function getSchemeDescription(): string {
+    const builtin = SCHEMES.find((s) => s.id === scheme);
+    if (builtin) return builtin.description;
+    if (customSchemeData) {
+      const enabled = customSchemeData.rules.filter((r) => r.enabled);
+      return `自定义方案 · ${enabled.length} 条规则已启用`;
+    }
+    return '';
+  }
+
   return (
     <div className="step-card card">
       <h3 className="step-heading">确认发放明细</h3>
@@ -403,15 +442,47 @@ function StepPreview({
                 <button
                   key={s.id}
                   className={`scheme-tab ${scheme === s.id ? 'active' : ''}`}
-                  onClick={() => onSchemeChange(s.id)}
+                  onClick={() => { onSchemeChange(s.id, undefined); setShowEditor(false); }}
                 >
                   {s.name}
                 </button>
               ))}
+              {savedSchemes.map((s) => (
+                <div key={s.id} className="scheme-tab-custom-wrap">
+                  <button
+                    className={`scheme-tab scheme-tab-custom ${scheme === s.id ? 'active' : ''}`}
+                    onClick={() => { onSchemeChange(s.id, s); setShowEditor(false); }}
+                  >
+                    {s.name}
+                  </button>
+                  <button
+                    className="scheme-tab-edit"
+                    title="编辑方案"
+                    onClick={() => { setEditingScheme(s); setShowEditor(true); onSchemeChange(s.id, s); }}
+                  >✎</button>
+                  <button
+                    className="scheme-tab-del"
+                    title="删除方案"
+                    onClick={() => handleDeleteScheme(s.id)}
+                  >×</button>
+                </div>
+              ))}
+              <button
+                className="scheme-tab-new"
+                onClick={() => { setEditingScheme(undefined); setShowEditor((v) => !v); }}
+              >
+                {showEditor && !editingScheme ? '收起' : '+ 新建方案'}
+              </button>
             </div>
-            <p className="scheme-desc">
-              {SCHEMES.find((s) => s.id === scheme)?.description}
-            </p>
+            <p className="scheme-desc">{getSchemeDescription()}</p>
+
+            {showEditor && (
+              <CustomSchemeEditor
+                existing={editingScheme}
+                onSave={handleSaveCustomScheme}
+                onCancel={() => { setShowEditor(false); setEditingScheme(undefined); }}
+              />
+            )}
           </div>
         </div>
         {modules.has('每日开口') && (

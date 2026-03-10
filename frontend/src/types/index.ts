@@ -41,20 +41,29 @@ export interface MPBreakdown {
   total: number;
 }
 
-export type SchemeId = 'scheme1' | 'scheme2' | 'custom';
+export type SchemeId = string;
 
-export interface CustomRuleEntry {
-  resourceType: string;
-  field: string;
-  condition: string;
-  amount: number;
+export interface RuleTemplate {
+  id: string;
+  label: string;
+  group: string;
+  hasThreshold: boolean;
+  defaultAmount: number;
+  defaultThreshold: number;
 }
 
-export interface SchemeConfig {
-  id: SchemeId;
+export interface SchemeRuleConfig {
+  templateId: string;
+  enabled: boolean;
+  amount: number;
+  threshold: number;
+}
+
+export interface SavedCustomScheme {
+  id: string;
   name: string;
-  description: string;
-  customRules?: CustomRuleEntry[];
+  rules: SchemeRuleConfig[];
+  createdAt: number;
 }
 
 export type Module = '基础落实' | '每日开口' | '课堂参与' | '个性化奖励';
