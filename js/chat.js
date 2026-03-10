@@ -82,8 +82,9 @@ var Chat = (function() {
     input.addEventListener('focus', function() {
       setTimeout(function() {
         updateChatViewportHeight();
-        input.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-      }, 120);
+        var msgs = document.getElementById('chat-messages');
+        if (msgs) msgs.scrollTop = msgs.scrollHeight;
+      }, 300);
     });
   }
 
