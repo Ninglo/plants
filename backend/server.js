@@ -49,8 +49,12 @@ app.post('/api/scraper/login', async (req, res) => {
     await scraper.login();
     console.log(`✅ 登录成功: ${username}`);
 
-    // 登录后立即抓班级，保持同一浏览器会话
-    const classes = await scraper.scrapeClassList();
+    const classMap = await scraper.getClassMap();
+    const classes = classMap.map((item) => ({
+      id: item.classCode,
+      name: item.classCode,
+      squadId: item.squadId,
+    }));
     console.log(`✅ 获取到 ${classes.length} 个班级: ${classes.map(c => c.name).join(', ')}`);
 
     scraperSession = { username, password, scraper };
@@ -75,7 +79,12 @@ app.post('/api/scraper/get-classes', async (req, res) => {
     if (!scraperSession) {
       return res.status(401).json({ error: '未登录，请先登录' });
     }
-    const classes = await scraperSession.scraper.scrapeClassList();
+    const classMap = await scraperSession.scraper.getClassMap(true);
+    const classes = classMap.map((item) => ({
+      id: item.classCode,
+      name: item.classCode,
+      squadId: item.squadId,
+    }));
     console.log(`✅ 刷新班级: ${classes.length} 个`);
     res.json({ status: 'success', data: classes, count: classes.length });
   } catch (error) {

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ClassInfo } from '../types';
 import { getCurrentWeek, getWeekRange, formatDateShort } from '../utils/weekNumber';
 import './Welcome.css';
@@ -11,6 +12,7 @@ interface Props {
 export default function Welcome({ teacherName, classes, onSelectClass }: Props) {
   const week = getCurrentWeek();
   const { start, end } = getWeekRange(week);
+  const [showGuide, setShowGuide] = useState(false);
 
   const firstName = teacherName.replace(/^(ms\.?|mr\.?|mrs\.?)/i, '').trim().split(/[\s_]/)[0];
   const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
@@ -73,6 +75,22 @@ export default function Welcome({ teacherName, classes, onSelectClass }: Props) 
             <strong>操作流程</strong>
             <p>选择班级 → 勾选发放模块 → 上传数据文件 → 确认明细 → 生成图片 & Excel</p>
           </div>
+        </div>
+
+        <div className="guide-panel card">
+          <button className="guide-toggle" onClick={() => setShowGuide((v) => !v)}>
+            <span className="guide-toggle-icon">📖</span>
+            <span>使用说明</span>
+            <span className="guide-toggle-arrow">{showGuide ? '▲' : '▼'}</span>
+          </button>
+          {showGuide && (
+            <iframe
+              src="/guide.html"
+              className="guide-frame"
+              title="使用说明"
+              sandbox="allow-same-origin"
+            />
+          )}
         </div>
       </div>
     </div>

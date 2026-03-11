@@ -151,3 +151,16 @@
   line-height: 1.7;
   margin: 0;
 }
+
+.result-rules-toggle-row {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 2px;
+  border-top: 1px solid var(--gray-200);
+  margin-top: 4px;
+}
+
+.col-star {
+  color: var(--green-dark);
+  font-weight: 700;
+}

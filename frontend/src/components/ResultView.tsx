@@ -20,6 +20,12 @@ function fmt(mp: number): string {
   return `${Math.round(mp * 10)} CP`;
 }
 
+function fmtStar(mp: number, isMax: boolean): string {
+  const text = fmt(mp);
+  if (!isMax || mp <= 0) return text;
+  return `✨ ${text} ✨`;
+}
+
 function sortResults(list: MPBreakdown[], key: SortKey): MPBreakdown[] {
   const r = [...list];
   switch (key) {
@@ -73,6 +79,14 @@ export default function ResultView({ results, students, bonusItems, classCode, w
   const sorted = sortResults(results, sortKey);
   const totalMP = results.reduce((s, r) => s + r.total, 0);
 
+  const maxBasic = showBasic ? Math.max(...results.map(r => r.基础落实)) : 0;
+  const maxDaily = showDaily ? Math.max(...results.map(r => r.每日开口)) : 0;
+  const maxClass = showClass ? Math.max(...results.map(r => r.课堂参与)) : 0;
+  const maxBonusAmounts = bonusCols.map(b =>
+    Math.max(...results.map(r => getBonusAmount(r.studentId, b)))
+  );
+  const maxTotal = Math.max(...results.map(r => r.total));
+
   async function handleDownloadImage() {
     if (!cardRef.current) return;
     setExporting(true);
@@ -118,12 +132,6 @@ export default function ResultView({ results, students, bonusItems, classCode, w
       <div className="result-topbar">
         <button className="back-btn" onClick={onBack}>← 返回</button>
         <div className="result-controls">
-          <button
-            className={`btn btn-ghost btn-sm${showRules ? ' btn-rules-active' : ''}`}
-            onClick={() => setShowRules((v) => !v)}
-          >
-            {showRules ? '隐藏发放规则' : '显示发放规则'}
-          </button>
           <select className="sort-select" value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)}>
             {SORT_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
           </select>
@@ -165,17 +173,27 @@ export default function ResultView({ results, students, bonusItems, classCode, w
                   </td>
                   <td className="col-name-en">{r.englishName}</td>
                   <td className="col-name-zh">{r.chineseName}</td>
-                  {showBasic && <td>{fmt(r.基础落实)}</td>}
-                  {showDaily && <td>{fmt(r.每日开口)}</td>}
-                  {showClass && <td>{fmt(r.课堂参与)}</td>}
-                  {bonusCols.map((b) => (
-                    <td key={b.name}>{fmt(getBonusAmount(r.studentId, b))}</td>
-                  ))}
-                  <td className="col-total-val">{fmt(r.total)}</td>
+                  {showBasic && <td className={r.基础落实 > 0 && r.基础落实 === maxBasic ? 'col-star' : ''}>{fmtStar(r.基础落实, r.基础落实 === maxBasic)}</td>}
+                  {showDaily && <td className={r.每日开口 > 0 && r.每日开口 === maxDaily ? 'col-star' : ''}>{fmtStar(r.每日开口, r.每日开口 === maxDaily)}</td>}
+                  {showClass && <td className={r.课堂参与 > 0 && r.课堂参与 === maxClass ? 'col-star' : ''}>{fmtStar(r.课堂参与, r.课堂参与 === maxClass)}</td>}
+                  {bonusCols.map((b, bi) => {
+                    const amt = getBonusAmount(r.studentId, b);
+                    return <td key={b.name} className={amt > 0 && amt === maxBonusAmounts[bi] ? 'col-star' : ''}>{fmtStar(amt, amt === maxBonusAmounts[bi])}</td>;
+                  })}
+                  <td className={`col-total-val${r.total === maxTotal && r.total > 0 ? ' col-star' : ''}`}>{fmtStar(r.total, r.total === maxTotal)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="result-rules-toggle-row">
+          <button
+            className={`btn btn-ghost btn-sm${showRules ? ' btn-rules-active' : ''}`}
+            onClick={() => setShowRules((v) => !v)}
+          >
+            {showRules ? '隐藏发放规则' : '显示发放规则'}
+          </button>
         </div>
 
         {showRules && (
