@@ -68,6 +68,20 @@ export interface SavedCustomScheme {
 
 export type Module = '基础落实' | '每日开口' | '课堂参与' | '个性化奖励';
 
+export interface BonusHistoryRecord {
+  classCode: string;
+  week: number;
+  studentNames: string[];
+  amount: number;
+  timestamp: number;
+}
+
+export interface BonusHistoryEntry {
+  bonusName: string;
+  lastAmount: number;
+  records: BonusHistoryRecord[];
+}
+
 export type AppScreen = 'login' | 'welcome' | 'flow';
 
 export interface AppState {

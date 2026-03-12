@@ -4,6 +4,7 @@ import { parseBasicFile, parseDailyCheckFile } from '../utils/parseExcel';
 import { calculateMP, SCHEMES } from '../utils/calculateMP';
 import { getCurrentWeek } from '../utils/weekNumber';
 import { loadSavedSchemes, saveScheme, deleteScheme } from '../utils/customScheme';
+import { saveBonusRecord, getBonusNames, getLastAmount, getHistoryForBonus } from '../utils/bonusHistory';
 import CustomSchemeEditor from './CustomSchemeEditor';
 import ResultView from './ResultView';
 import './DistributionFlow.css';
@@ -90,6 +91,12 @@ export default function DistributionFlow({ classInfo, onBack }: Props) {
       bonusItems: bonusItems.filter((b) => b.studentIds.includes(s.studentId)),
     }));
     const results = calculateMP(studWithBonus, scheme, dailyRate, selectedModules, customSchemeData);
+    bonusItems.forEach((b) => {
+      const names = students
+        .filter((s) => b.studentIds.includes(s.studentId))
+        .map((s) => s.englishName);
+      saveBonusRecord(b.name, displayCode, week, names, b.amount);
+    });
     setMpResults(results);
     setStep(4);
   }
@@ -181,6 +188,8 @@ export default function DistributionFlow({ classInfo, onBack }: Props) {
           }}
           onAddBonus={(b) => setBonusItems((prev) => [...prev, b])}
           onRemoveBonus={(i) => setBonusItems((prev) => prev.filter((_, idx) => idx !== i))}
+          classCode={displayCode}
+          week={week}
           onBack={() => setStep(2)}
           onGenerate={applyResults}
         />
@@ -339,6 +348,8 @@ function StepPreview({
   onDefaultParticipationChange,
   onAddBonus,
   onRemoveBonus,
+  classCode,
+  week,
   onBack,
   onGenerate,
 }: {
@@ -356,6 +367,8 @@ function StepPreview({
   onDefaultParticipationChange: (val: number) => void;
   onAddBonus: (b: BonusItem) => void;
   onRemoveBonus: (i: number) => void;
+  classCode: string;
+  week: number;
   onBack: () => void;
   onGenerate: () => void;
 }) {
@@ -365,6 +378,8 @@ function StepPreview({
   const [bonusAmount, setBonusAmount] = useState('');
   const [bonusStudents, setBonusStudents] = useState<Set<string>>(new Set());
   const [bonusError, setBonusError] = useState('');
+  const [expandedHistory, setExpandedHistory] = useState<number | null>(null);
+  const [bonusNameSuggestions] = useState<string[]>(() => getBonusNames());
 
   const [savedSchemes, setSavedSchemes] = useState<SavedCustomScheme[]>([]);
   const [showEditor, setShowEditor] = useState(false);
@@ -549,7 +564,22 @@ function StepPreview({
         <div className="bonus-section">
           <div className="section-mini-title">个性化奖励</div>
           <div className="bonus-add-row">
-            <input className="input-field" placeholder="奖励名称" value={bonusName} onChange={(e) => setBonusName(e.target.value)} style={{ flex: 2 }} />
+            <input
+              className="input-field"
+              placeholder="奖励名称"
+              value={bonusName}
+              list="bonus-name-list"
+              onChange={(e) => {
+                const v = e.target.value;
+                setBonusName(v);
+                const last = getLastAmount(v);
+                if (last !== null && bonusAmount === '') setBonusAmount(String(last));
+              }}
+              style={{ flex: 2 }}
+            />
+            <datalist id="bonus-name-list">
+              {bonusNameSuggestions.map((n) => <option key={n} value={n} />)}
+            </datalist>
             <input className="input-field" placeholder="MP" type="number" step="0.1" value={bonusAmount} onChange={(e) => setBonusAmount(e.target.value)} style={{ width: 80 }} />
           </div>
           <div className="student-select-list">
@@ -566,12 +596,36 @@ function StepPreview({
           </button>
           {bonusItems.length > 0 && (
             <div className="bonus-list">
-              {bonusItems.map((b, i) => (
-                <div key={i} className="bonus-tag">
-                  <span>{b.name}: {b.amount} MP × {b.studentIds.length}人</span>
-                  <button onClick={() => onRemoveBonus(i)}>×</button>
-                </div>
-              ))}
+              {bonusItems.map((b, i) => {
+                const hist = getHistoryForBonus(b.name);
+                const isOpen = expandedHistory === i;
+                return (
+                  <div key={i} className="bonus-tag-wrap">
+                    <div className="bonus-tag">
+                      <span>{b.name}: {b.amount} MP × {b.studentIds.length}人</span>
+                      {hist.length > 0 && (
+                        <button
+                          className="bonus-hist-btn"
+                          title="查看历史"
+                          onClick={() => setExpandedHistory(isOpen ? null : i)}
+                        >📋</button>
+                      )}
+                      <button onClick={() => { onRemoveBonus(i); if (expandedHistory === i) setExpandedHistory(null); }}>×</button>
+                    </div>
+                    {isOpen && hist.length > 0 && (
+                      <div className="bonus-history-panel">
+                        <div className="bonus-history-title">历史记录</div>
+                        {hist.map((rec, ri) => (
+                          <div key={ri} className="bonus-history-row">
+                            <span className="bonus-history-meta">Week {rec.week} · {rec.classCode}</span>
+                            <span>{rec.studentNames.join('、')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

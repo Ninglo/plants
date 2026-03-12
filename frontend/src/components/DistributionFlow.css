@@ -375,7 +375,10 @@
 
 .bonus-add-row { display: flex; gap: 8px; }
 
-.bonus-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.bonus-list { display: flex; flex-direction: column; gap: 6px; }
+
+.bonus-tag-wrap { display: flex; flex-direction: column; gap: 0; }
+
 .bonus-tag {
   display: flex;
   align-items: center;
@@ -386,6 +389,41 @@
   font-size: 12px;
   color: var(--gray-700);
   border: 1px solid rgba(212,163,115,0.3);
+  width: fit-content;
 }
 .bonus-tag button { background: none; border: none; color: var(--gray-400); font-size: 14px; line-height: 1; padding: 0; }
 .bonus-tag button:hover { color: #dc2626; }
+.bonus-hist-btn { font-size: 12px !important; cursor: pointer; }
+.bonus-hist-btn:hover { color: var(--green-dark) !important; }
+
+.bonus-history-panel {
+  margin-top: 4px;
+  margin-left: 12px;
+  padding: 8px 12px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bonus-history-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 2px;
+}
+.bonus-history-row {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--gray-700);
+}
+.bonus-history-meta {
+  font-size: 11px;
+  color: var(--gray-500);
+  white-space: nowrap;
+  flex-shrink: 0;
+}

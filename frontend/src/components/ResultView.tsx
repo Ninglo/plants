@@ -56,11 +56,21 @@ const RULES_TEXT = `MP 发放原则
 【个性化奖励】（可选）
 老师自定义奖励任务，指定学生与金额，灵活叠加`;
 
+type Theme = 'forest' | 'ocean' | 'sakura' | 'sunshine';
+
+const THEMES: { id: Theme; label: string }[] = [
+  { id: 'forest',   label: '绿意' },
+  { id: 'ocean',    label: '海蓝' },
+  { id: 'sakura',   label: '樱粉' },
+  { id: 'sunshine', label: '暖阳' },
+];
+
 export default function ResultView({ results, students, bonusItems, classCode, week, onBack }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('total_desc');
   const [showRules, setShowRules] = useState(false);
+  const [theme, setTheme] = useState<Theme>('forest');
 
   const mpMap = new Map(results.map((r) => [r.studentId, r.total]));
 
@@ -132,6 +142,16 @@ export default function ResultView({ results, students, bonusItems, classCode, w
       <div className="result-topbar">
         <button className="back-btn" onClick={onBack}>← 返回</button>
         <div className="result-controls">
+          <div className="theme-selector">
+            {THEMES.map((t) => (
+              <button
+                key={t.id}
+                className={`theme-dot theme-dot-${t.id}${theme === t.id ? ' active' : ''}`}
+                title={t.label}
+                onClick={() => setTheme(t.id)}
+              />
+            ))}
+          </div>
           <select className="sort-select" value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)}>
             {SORT_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
           </select>
@@ -142,7 +162,7 @@ export default function ResultView({ results, students, bonusItems, classCode, w
         </div>
       </div>
 
-      <div className="result-card card" ref={cardRef}>
+      <div className="result-card card" ref={cardRef} data-theme={theme}>
         <div className="result-header">
           <div className="result-class-info">
             <span className="result-class-code">{classCode}</span>
