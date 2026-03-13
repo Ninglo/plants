@@ -36,6 +36,12 @@ function calcScheme1(student: StudentData): number {
       if (score !== null && Number(score) / 15 >= 0.75) mp += 0.2;
     } else if (type === '复合资源') {
       if (isCompleted(c['是否完成'])) mp += 0.1;
+    } else if (type === '视频') {
+      if (isCompleted(c['是否完成'])) mp += 0.1;
+    } else if (type === '互动视频') {
+      if (isCompleted(c['是否完成'])) mp += 0.1;
+    } else if (type === '高阶阅读') {
+      if (isCompleted(c['是否完成'])) mp += 0.1;
     }
   }
   return round2(mp);

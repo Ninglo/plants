@@ -13,6 +13,9 @@ export const RULE_TEMPLATES: RuleTemplate[] = [
   { id: 'test_done',          label: '测试 · 完成',                   group: '测试',         hasThreshold: false, defaultAmount: 0.1, defaultThreshold: 0 },
   { id: 'test_score',         label: '测试 · 得分率 ≥ 阈值',          group: '测试',         hasThreshold: true,  defaultAmount: 0.2, defaultThreshold: 0.75 },
   { id: 'composite_done',     label: '复合资源 · 完成',               group: '复合资源',     hasThreshold: false, defaultAmount: 0.1, defaultThreshold: 0 },
+  { id: 'video_done',         label: '视频 · 完成',                   group: '视频',         hasThreshold: false, defaultAmount: 0.1, defaultThreshold: 0 },
+  { id: 'interactive_done',   label: '互动视频 · 完成',               group: '互动视频',     hasThreshold: false, defaultAmount: 0.1, defaultThreshold: 0 },
+  { id: 'reading_done',       label: '高阶阅读 · 完成',               group: '高阶阅读',     hasThreshold: false, defaultAmount: 0.1, defaultThreshold: 0 },
 ];
 
 const STORAGE_KEY = 'amber_custom_schemes';
@@ -109,6 +112,15 @@ export function calcCustomScheme(student: StudentData, scheme: SavedCustomScheme
       }
     } else if (type === '复合资源') {
       const r = getRule('composite_done');
+      if (r?.enabled && isCompleted(c['是否完成'])) mp += r.amount;
+    } else if (type === '视频') {
+      const r = getRule('video_done');
+      if (r?.enabled && isCompleted(c['是否完成'])) mp += r.amount;
+    } else if (type === '互动视频') {
+      const r = getRule('interactive_done');
+      if (r?.enabled && isCompleted(c['是否完成'])) mp += r.amount;
+    } else if (type === '高阶阅读') {
+      const r = getRule('reading_done');
       if (r?.enabled && isCompleted(c['是否完成'])) mp += r.amount;
     }
   }
