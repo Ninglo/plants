@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import type { ClassInfo, DayOfWeek } from '../types';
+import type { ClassInfo } from '../types';
 import { getCurrentWeek, getWeekRange, formatDateShort } from '../utils/weekNumber';
-import { getSchedule, saveSchedule, sortClassesBySchedule, ALL_DAYS } from '../utils/classSchedule';
+import { getClassDays, sortClassesBySchedule } from '../utils/classSchedule';
+import ScheduleEditor from './ScheduleEditor';
 import './Welcome.css';
 
 interface Props {
@@ -14,23 +15,14 @@ export default function Welcome({ teacherName, classes, onSelectClass }: Props) 
   const week = getCurrentWeek();
   const { start, end } = getWeekRange(week);
   const [showGuide, setShowGuide] = useState(false);
-  const [openSchedule, setOpenSchedule] = useState<string | null>(null);
-  const [, forceUpdate] = useState(0);
+  const [showScheduleEditor, setShowScheduleEditor] = useState(false);
+  const [scheduleVersion, setScheduleVersion] = useState(0);
 
   const firstName = teacherName.replace(/^(ms\.?|mr\.?|mrs\.?)/i, '').trim().split(/[\s_]/)[0];
   const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
 
   function handleManualStart() {
     onSelectClass({ id: 'manual', name: '手动输入' });
-  }
-
-  function toggleDay(classCode: string, day: DayOfWeek) {
-    const current = getSchedule(classCode);
-    const next = current.includes(day)
-      ? current.filter((d) => d !== day)
-      : [...current, day];
-    saveSchedule(classCode, next);
-    forceUpdate((n) => n + 1);
   }
 
   const sortedClasses = sortClassesBySchedule(classes);
@@ -55,46 +47,41 @@ export default function Welcome({ teacherName, classes, onSelectClass }: Props) 
           <>
             <div className="section-title">
               <span>你的班级</span>
-              <span className="section-count">{classes.length} 个班级</span>
+              <div className="section-title-right">
+                <span className="section-count">{classes.length} 个班级</span>
+                <button
+                  className={`btn btn-ghost btn-sm schedule-btn${showScheduleEditor ? ' active' : ''}`}
+                  onClick={() => setShowScheduleEditor((v) => !v)}
+                >
+                  📅 {showScheduleEditor ? '收起' : '管理上课时间'}
+                </button>
+              </div>
             </div>
+
+            {showScheduleEditor && (
+              <ScheduleEditor
+                key={scheduleVersion}
+                classes={classes}
+                onClose={() => setShowScheduleEditor(false)}
+                onSaved={() => setScheduleVersion((v) => v + 1)}
+              />
+            )}
+
             <div className="class-grid">
               {sortedClasses.map((cls) => {
-                const days = getSchedule(cls.name);
-                const isOpen = openSchedule === cls.name;
+                const days = getClassDays(cls.name);
                 return (
-                  <div key={cls.id} className="class-card-wrap">
-                    <button
-                      className="class-card"
-                      onClick={() => onSelectClass(cls)}
-                    >
-                      <div className="class-code">{cls.name}</div>
-                      <div className="class-action">进入 →</div>
-                    </button>
-                    <button
-                      className={`class-schedule-badge${days.length ? ' has-days' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenSchedule(isOpen ? null : cls.name);
-                      }}
-                    >
-                      {days.length
-                        ? `📅 ${days.join(' · ')}`
-                        : '＋ 设置上课时间'}
-                    </button>
-                    {isOpen && (
-                      <div className="class-day-picker" onClick={(e) => e.stopPropagation()}>
-                        {ALL_DAYS.map((day) => (
-                          <button
-                            key={day}
-                            className={`day-btn${days.includes(day) ? ' selected' : ''}`}
-                            onClick={() => toggleDay(cls.name, day)}
-                          >
-                            {day}
-                          </button>
-                        ))}
-                      </div>
+                  <button
+                    key={cls.id}
+                    className="class-card"
+                    onClick={() => onSelectClass(cls)}
+                  >
+                    <div className="class-code">{cls.name}</div>
+                    {days.length > 0 && (
+                      <div className="class-days">{days.join(' · ')}</div>
                     )}
-                  </div>
+                    <div className="class-action">进入 →</div>
+                  </button>
                 );
               })}
             </div>

@@ -94,8 +94,8 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', loggedIn: !!scraperSession, loginInProgress });
 });
 
-// 托管座位表工具（独立应用）
-const seatingDir = path.join(__dirname, '../../newestclasstable/dist');
+// 托管座位表工具（独立应用，已同步绿色主题）
+const seatingDir = path.join(__dirname, '../frontend/dist/seating');
 app.use('/seating', express.static(seatingDir));
 
 // 托管前端静态文件
