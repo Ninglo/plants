@@ -89,6 +89,13 @@ export default function ResultView({ results, students, bonusItems, classCode, w
   const sorted = sortResults(results, sortKey);
   const totalMP = results.reduce((s, r) => s + r.total, 0);
 
+  const medalMap = new Map<string, string>(
+    [...results]
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 3)
+      .map((r, i) => [r.studentId, i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'])
+  );
+
   const maxBasic = showBasic ? Math.max(...results.map(r => r.基础落实)) : 0;
   const maxDaily = showDaily ? Math.max(...results.map(r => r.每日开口)) : 0;
   const maxClass = showClass ? Math.max(...results.map(r => r.课堂参与)) : 0;
@@ -189,7 +196,7 @@ export default function ResultView({ results, students, bonusItems, classCode, w
               {sorted.map((r, i) => (
                 <tr key={r.studentId} className={i % 2 === 0 ? 'row-even' : 'row-odd'}>
                   <td className="col-rank">
-                    {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : ''}
+                    {medalMap.get(r.studentId) ?? ''}
                   </td>
                   <td className="col-name-en">{r.englishName}</td>
                   <td className="col-name-zh">{r.chineseName}</td>
