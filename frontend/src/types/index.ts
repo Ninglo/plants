@@ -82,7 +82,14 @@ export interface BonusHistoryEntry {
   records: BonusHistoryRecord[];
 }
 
-export type AppScreen = 'login' | 'welcome' | 'flow';
+export type AppScreen = 'login' | 'welcome' | 'hub' | 'flow';
+
+export type DayOfWeek = '周一' | '周二' | '周三' | '周四' | '周五' | '周六' | '周日';
+
+export interface ClassSchedule {
+  classCode: string;
+  days: DayOfWeek[];
+}
 
 export interface AppState {
   screen: AppScreen;
