@@ -15,9 +15,8 @@ export default function Login({ onLogin }: Props) {
 
   useEffect(() => {
     const savedUser = localStorage.getItem('amber_username');
-    const savedPass = localStorage.getItem('amber_password');
     if (savedUser) setUsername(savedUser);
-    if (savedPass) setPassword(savedPass);
+    localStorage.removeItem('amber_password');
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -62,7 +61,6 @@ export default function Login({ onLogin }: Props) {
 
       setLoadingMsg(`登录成功，已获取 ${classes.length} 个班级`);
       localStorage.setItem('amber_username', username.trim());
-      localStorage.setItem('amber_password', password.trim());
       setTimeout(() => onLogin(username.trim(), classes), 600);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '连接失败';
