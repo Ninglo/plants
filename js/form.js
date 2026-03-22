@@ -473,12 +473,7 @@ var Form = (function() {
 
     html += '<div class="voice-capture-box">';
     html += '<div class="voice-capture-header">现场长记录</div>';
-    html += '<div class="voice-capture-hint">这里不做浏览器语音识别。你可以直接打字，或用手机输入法自己的语音转文字。</div>';
     html += '<textarea class="form-textarea form-textarea-large" id="f-detailedObservation" rows="7" placeholder="例：灌木，高约一米多。枝条偏红褐，叶互生，叶面发亮，边缘细锯齿。花已经谢了，只见到残留的萼和一些小果。生在溪边半阴处，和绣球有点像，但叶脉更明显……"></textarea>';
-    html += '</div>';
-
-    html += '<div class="field-prompts">';
-    html += '<div class="field-prompt">可顺嘴带上：整体株型、叶序叶脉、花果状态、气味触感、生境、相似种、你的判断依据</div>';
     html += '</div>';
 
     html += '<div class="form-group">';

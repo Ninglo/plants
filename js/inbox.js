@@ -8,32 +8,30 @@ var Inbox = (function() {
     quickPhotos = [];
 
     var html = '';
-    // 拍照区 — 大按钮（拍第一张前）
-    html += '<div id="quick-photo-initial" style="text-align:center; margin-bottom:16px;">';
-    html += '<label style="cursor:pointer;">';
-    html += '<input type="file" accept="image/*" multiple style="display:none" id="quick-photo-input" onchange="Inbox.onPhotoSelected(this.files)">';
-    html += '<div class="photo-add" style="width:100%; height:200px; font-size:16px; flex-direction:column; gap:8px; display:flex; align-items:center; justify-content:center;">';
+    html += '<div id="quick-action-bar" class="quick-action-bar">';
+    html += '<button class="btn btn-primary btn-block" id="quick-save-btn" onclick="Inbox.saveQuick()" disabled>保存速记</button>';
+    html += '</div>';
+
+    html += '<div id="quick-photo-initial" style="text-align:center; margin-bottom:12px;">';
+    html += '<label style="cursor:pointer; display:block;">';
+    html += '<input type="file" accept="image/*" capture="environment" style="display:none" id="quick-photo-input" onchange="Inbox.onPhotoSelected(this.files)">';
+    html += '<div class="photo-add quick-photo-primary" style="width:100%; height:172px; font-size:16px; flex-direction:column; gap:8px; display:flex; align-items:center; justify-content:center;">';
     html += '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>';
-    html += '<span style="color:var(--gray-500)">点击拍照或选择图片</span>';
+    html += '<span style="color:var(--gray-600)">拍照</span>';
     html += '</div>';
     html += '</label>';
     html += '</div>';
-    // 已拍照片预览区 + 追加按钮（拍照后显示）
-    html += '<div id="quick-photo-list" style="display:none; margin-bottom:16px;">';
-    html += '<div id="quick-photo-thumbs" style="display:flex; gap:10px; flex-wrap:wrap;"></div>';
-    html += '<label style="cursor:pointer; display:inline-block; margin-top:10px;">';
+    html += '<div id="quick-photo-list" style="display:none; margin-bottom:12px;">';
+    html += '<div id="quick-photo-thumbs" class="quick-photo-thumbs"></div>';
+    html += '<label style="cursor:pointer; display:inline-block; margin-top:8px;">';
     html += '<input type="file" accept="image/*" multiple style="display:none" onchange="Inbox.onPhotoSelected(this.files)">';
-    html += '<div class="photo-add" style="width:80px; height:80px; font-size:24px; display:flex; align-items:center; justify-content:center; border-radius:12px;">＋</div>';
+    html += '<div class="quick-upload-link">从相册添加</div>';
     html += '</label>';
     html += '</div>';
 
-    // 观察区（拍照后才显示）
     html += '<div id="quick-obs-section" style="display:none;">';
     html += renderObsSection();
     html += '</div>';
-
-    // 保存按钮
-    html += '<button class="btn btn-primary btn-block" id="quick-save-btn" onclick="Inbox.saveQuick()" disabled>拍照后开始观察</button>';
 
     document.getElementById('modal-body').innerHTML = html;
     App.openModal('速记速拍');
@@ -44,27 +42,18 @@ var Inbox = (function() {
     var html = '';
     var today = new Date();
     var dateStr = today.getFullYear() + '/' + (today.getMonth() + 1) + '/' + today.getDate();
-    html += '<div style="display:flex; gap:10px; margin:14px 0 6px; align-items:center;">';
-    html += '<div style="font-size:13px; color:var(--gray-500); white-space:nowrap;">📍 ' + dateStr + '</div>';
-    html += '<div style="flex:1; display:flex; gap:6px; align-items:center;">';
-    html += '<input type="text" class="form-input" id="quick-location" placeholder="定位中..." style="flex:1; font-size:13px; padding:6px 10px;">';
+    html += '<div class="quick-meta-row">';
+    html += '<div class="quick-meta-pill">时间 ' + dateStr + '</div>';
+    html += '<div class="quick-location-wrap">';
+    html += '<input type="text" class="form-input" id="quick-location" placeholder="定位中..." style="flex:1; font-size:13px; padding:8px 12px;">';
     html += '<button type="button" class="btn-icon" onclick="Inbox.getLocation()" title="重新定位" style="flex-shrink:0; width:32px; height:32px;">';
     html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>';
     html += '</button>';
     html += '</div>';
     html += '</div>';
 
-    html += '<div class="form-section" style="margin-top:14px;">';
-    html += '<div class="voice-capture-header">现场速记</div>';
-    html += '<div class="voice-capture-hint">这里不做浏览器语音识别。你可以直接打字，或用手机输入法自己的语音转文字。</div>';
-    html += '<div class="form-group" style="margin-top:14px;">';
-    html += '<label class="form-label">观察内容</label>';
-    html += '<textarea id="quick-note" class="form-textarea form-textarea-large" placeholder="把现场看到的都先记下来：株型、叶序、颜色、质感、生境、相似种、你的判断和疑问……" rows="7"></textarea>';
-    html += '</div>';
-    html += '<div class="field-prompts">';
-    html += '<div class="field-prompt">建议先追求完整，不追求标准。回头再从这段速记里提炼叶、花、果等结构特征。</div>';
-    html += '</div>';
-
+    html += '<div class="form-section quick-note-section" style="margin-top:12px;">';
+    html += '<textarea id="quick-note" class="form-textarea form-textarea-large quick-note-input" placeholder="写下现场观察。" rows="8"></textarea>';
     html += '</div>';
     return html;
   }
@@ -84,7 +73,7 @@ var Inbox = (function() {
         var thumbs = document.getElementById('quick-photo-thumbs');
         if (thumbs) {
           var thumb = document.createElement('div');
-          thumb.style.cssText = 'position:relative; width:100px; height:100px; border-radius:12px; overflow:hidden; flex-shrink:0;';
+          thumb.style.cssText = 'position:relative; width:88px; height:88px; border-radius:12px; overflow:hidden; flex-shrink:0;';
           thumb.innerHTML = '<img src="' + dataUrl + '" style="width:100%; height:100%; object-fit:cover;">' +
             '<button type="button" onclick="Inbox.removePhoto(' + (quickPhotos.length - 1) + ')" style="position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; background:rgba(0,0,0,0.5); color:#fff; border:none; font-size:12px; line-height:20px; text-align:center; cursor:pointer;">✕</button>';
           thumbs.appendChild(thumb);
@@ -106,7 +95,7 @@ var Inbox = (function() {
       // 更新按钮
       var btn = document.getElementById('quick-save-btn');
       btn.disabled = false;
-      btn.textContent = '保存观察';
+      btn.textContent = '保存速记';
     });
   }
 
@@ -161,7 +150,7 @@ var Inbox = (function() {
       thumbs.innerHTML = '';
       quickPhotos.forEach(function(p, i) {
         var thumb = document.createElement('div');
-        thumb.style.cssText = 'position:relative; width:100px; height:100px; border-radius:12px; overflow:hidden; flex-shrink:0;';
+        thumb.style.cssText = 'position:relative; width:88px; height:88px; border-radius:12px; overflow:hidden; flex-shrink:0;';
         thumb.innerHTML = '<img src="' + p.data + '" style="width:100%; height:100%; object-fit:cover;">' +
           '<button type="button" onclick="Inbox.removePhoto(' + i + ')" style="position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; background:rgba(0,0,0,0.5); color:#fff; border:none; font-size:12px; line-height:20px; text-align:center; cursor:pointer;">✕</button>';
         thumbs.appendChild(thumb);
@@ -175,7 +164,7 @@ var Inbox = (function() {
       if (list) list.style.display = 'none';
       var btn = document.getElementById('quick-save-btn');
       btn.disabled = true;
-      btn.textContent = '拍照后开始观察';
+      btn.textContent = '保存速记';
     }
   }
 
