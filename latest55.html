@@ -10,7 +10,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>野径手记</title>
   <script>
-    // 自动检测新版本：即使 index.html 被缓存，也能发现更新并刷新
     (function() {
       var LOCAL_VER = 55;
       fetch('version.txt?_=' + Date.now()).then(function(r) {
@@ -18,7 +17,6 @@
       }).then(function(v) {
         var remote = parseInt(v.trim());
         if (remote > LOCAL_VER) {
-          // 防止缓存异常导致的循环刷新
           var reloadKey = 'plants_reloaded_to_' + remote;
           if (!sessionStorage.getItem(reloadKey)) {
             sessionStorage.setItem(reloadKey, '1');
@@ -32,7 +30,6 @@
   <link rel="stylesheet" href="css/style.css?v=55">
 </head>
 <body>
-  <!-- 顶部栏 -->
   <header class="top-bar">
     <h1 class="app-title">野径手记</h1>
     <button class="btn-icon" id="btn-sync" title="数据同步">
@@ -43,12 +40,8 @@
     </button>
   </header>
 
-  <!-- 主内容区 -->
-  <main class="main-content" id="main-content">
-    <!-- 各视图会通过JS动态渲染到这里 -->
-  </main>
+  <main class="main-content" id="main-content"></main>
 
-  <!-- 快速拍照浮动按钮 -->
   <button class="fab" id="btn-quick-photo" title="速记速拍">
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
@@ -57,7 +50,6 @@
   </button>
   <input type="file" id="global-quick-camera" accept="image/*" capture="environment" style="display:none" onchange="Inbox.handleDirectCapture(this.files); this.value='';">
 
-  <!-- 底部导航栏 -->
   <nav class="bottom-nav">
     <button class="nav-item active" data-view="home">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -95,7 +87,6 @@
     </button>
   </nav>
 
-  <!-- 模态框容器 -->
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal" id="modal">
       <div class="modal-header">
@@ -110,7 +101,6 @@
     </div>
   </div>
 
-  <!-- JS 文件按依赖顺序加载 -->
   <script src="js/photodb.js?v=55"></script>
   <script src="js/storage.js?v=55"></script>
   <script src="js/sync.js?v=55"></script>

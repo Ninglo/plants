@@ -4,11 +4,16 @@ var Inbox = (function() {
   var quickPhotos = []; // [{id, data}]
 
   function quickShoot() {
-    openQuickPhoto(true);
+    var input = document.getElementById('global-quick-camera');
+    if (input) {
+      input.click();
+      return;
+    }
+    openQuickPhoto();
   }
 
   // 打开快速拍照
-  function openQuickPhoto(autoOpenCamera) {
+  function openQuickPhoto() {
     quickPhotos = [];
 
     var html = '';
@@ -39,14 +44,14 @@ var Inbox = (function() {
 
     document.getElementById('modal-body').innerHTML = html;
     App.openModal('速记速拍');
-    if (autoOpenCamera) {
-      setTimeout(triggerCamera, 120);
-    }
   }
 
-  function triggerCamera() {
-    var input = document.getElementById('quick-photo-input');
-    if (input) input.click();
+  function handleDirectCapture(files) {
+    if (!files || files.length === 0) return;
+    openQuickPhoto();
+    setTimeout(function() {
+      onPhotoSelected(files);
+    }, 60);
   }
 
   // 渲染速记字段
@@ -274,6 +279,7 @@ var Inbox = (function() {
   return {
     quickShoot: quickShoot,
     openQuickPhoto: openQuickPhoto,
+    handleDirectCapture: handleDirectCapture,
     onPhotoSelected: onPhotoSelected,
     removePhoto: removePhoto,
     getLocation: getLocation,
