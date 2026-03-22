@@ -12,7 +12,7 @@ var App = (function() {
 
     // 快速拍照按钮
     document.getElementById('btn-quick-photo').addEventListener('click', function() {
-      Inbox.openQuickPhoto();
+      Inbox.quickShoot();
     });
 
     // 同步按钮
