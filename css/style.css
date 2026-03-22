@@ -365,6 +365,92 @@ body::before {
 .type-btn.active-knowledge { border-color: var(--blue); background: var(--blue-light); color: #5a8a9e; }
 .type-btn.active-ecology { border-color: var(--orange); background: var(--orange-light); color: #a07040; }
 
+/* ========== 植物观察模式 ========== */
+.observation-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.observation-mode-btn {
+  border: 1.5px solid rgba(221,217,208,0.7);
+  background: rgba(255,254,249,0.72);
+  border-radius: var(--radius);
+  padding: 14px 12px;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.observation-mode-btn.active {
+  border-color: var(--green);
+  background: linear-gradient(180deg, rgba(240,246,232,0.95), rgba(255,254,249,0.92));
+  box-shadow: 0 8px 20px rgba(123,168,98,0.08);
+}
+.observation-mode-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+.observation-mode-desc {
+  font-size: 12px;
+  color: var(--gray-500);
+  line-height: 1.5;
+}
+.plant-observation-panel {
+  transition: opacity 0.2s, transform 0.2s, border-color 0.2s, background 0.2s;
+}
+.plant-observation-panel.is-muted {
+  opacity: 0.58;
+  border-style: dashed;
+}
+.plant-observation-panel.is-active {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+.voice-capture-box {
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, rgba(240,246,232,0.72), rgba(255,254,249,0.88));
+  border: 1px solid rgba(123,168,98,0.18);
+  margin-bottom: 14px;
+}
+.voice-capture-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--green-dark);
+  margin-bottom: 4px;
+}
+.voice-capture-hint {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-bottom: 10px;
+}
+.input-with-voice-large .btn-voice {
+  width: 44px;
+  height: 44px;
+}
+.form-textarea-large {
+  min-height: 160px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.field-prompts {
+  margin-bottom: 14px;
+}
+.field-prompt {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255,243,224,0.72);
+  border: 1px dashed rgba(212,163,115,0.45);
+  color: #8a643e;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 /* ========== 标签输入 ========== */
 .tags-container {
   display: flex;
@@ -1516,6 +1602,12 @@ img[data-photo-id] {
   color: var(--gray-700);
   margin-bottom: 10px;
 }
+.detail-obs-paragraph {
+  white-space: pre-wrap;
+  font-size: 14px;
+  color: var(--gray-700);
+  line-height: 1.8;
+}
 .detail-obs-chips {
   display: flex;
   flex-wrap: wrap;
@@ -1571,6 +1663,12 @@ img[data-photo-id] {
   background: var(--gray-100);
 }
 
+@media (max-width: 640px) {
+  .observation-mode-switch {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ========== 云端同步设置 ========== */
 .sync-section { margin-bottom: 4px; }
 .sync-section-title {
@@ -1607,44 +1705,26 @@ img[data-photo-id] {
   display: flex;
   flex-direction: column;
   height: calc(var(--chat-vvh, 88vh) - 60px);
-  margin: 0;
+  margin: -18px -18px 0;
 }
 .chat-provider-status {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
   padding: 8px 14px;
   font-size: 12px;
   color: var(--gray-600);
   background: rgba(255, 254, 249, 0.85);
   border-bottom: 1px solid rgba(221,217,208,0.35);
-  flex-shrink: 0;
-}
-.chat-provider-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.chat-top-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
 }
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 20px;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
   gap: 18px;
   -webkit-overflow-scrolling: touch;
 }
 .chat-bubble {
-  max-width: 82%;
+  max-width: 90%;
   padding: 12px 16px;
   border-radius: 20px;
   font-size: 16px;
@@ -1660,7 +1740,7 @@ img[data-photo-id] {
 }
 .chat-bubble-ai {
   align-self: flex-start;
-  max-width: 88%;
+  max-width: 94%;
   background: var(--gray-100);
   color: var(--gray-900);
   border-bottom-left-radius: 4px;
@@ -1679,7 +1759,7 @@ img[data-photo-id] {
 }
 .chat-input-bar {
   display: flex; gap: 10px;
-  padding: 12px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+  padding: 14px 16px calc(10px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--gray-200);
   background: var(--white);
 }
@@ -1719,17 +1799,22 @@ img[data-photo-id] {
   white-space: nowrap;
 }
 .chat-send-btn:disabled { opacity: 0.5; }
+.chat-bottom-bar {
+  display: flex; gap: 10px;
+  padding: 0 18px 14px;
+}
 .chat-extract-btn {
-  padding: 5px 10px;
-  border-radius: 14px;
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--radius-sm);
   border: 1.5px solid var(--orange);
   background: var(--orange-light);
   color: var(--orange);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  text-align: center;
   font-family: inherit;
-  white-space: nowrap;
 }
 .chat-extract-btn:disabled {
   opacity: 0.6;
@@ -1739,12 +1824,10 @@ img[data-photo-id] {
   background: none;
   border: 1.5px solid var(--border);
   color: var(--gray-500);
-  padding: 5px 10px;
-  border-radius: 14px;
-  font-size: 12px;
+  padding: 10px 14px;
+  border-radius: 22px;
+  font-size: 13px;
   cursor: pointer;
-  font-family: inherit;
-  white-space: nowrap;
 }
 .chat-extract-btn:active { opacity: 0.8; }
 .chat-extract-preview {
@@ -1783,11 +1866,13 @@ img[data-photo-id] {
 }
 
 @media (max-width: 480px) {
-  .chat-messages { padding: 16px 18px; gap: 14px; }
+  .chat-messages { padding: 16px 12px; gap: 14px; }
   .chat-bubble { font-size: 15px; line-height: 1.58; padding: 11px 14px; }
   .chat-image-btn { width: 36px; height: 36px; font-size: 16px; }
   .chat-input { font-size: 14px; padding: 10px 14px; }
   .chat-send-btn { font-size: 13px; padding: 9px 14px; }
+  .chat-extract-btn { font-size: 13px; }
+  .chat-new-btn { font-size: 12px; }
 }
 
 /* ========== 笔记本 ========== */

@@ -5,6 +5,7 @@ var Form = (function() {
   var currentTags = [];
   var currentLinks = [];
   var editingId = null;
+  var currentPlantInputMode = 'voice';
 
   // ===== 观察字段定义（按分组） =====
   var currentObsParts = []; // 当前选中的观察部位: ['leaf','flower','fruit']
@@ -210,6 +211,77 @@ var Form = (function() {
     return active ? active.getAttribute('data-value') : '';
   }
 
+  // 语音识别
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var activeRecognition = null; // 当前正在进行的语音识别实例
+
+  function startVoiceInput(targetInput) {
+    if (!SpeechRecognition) {
+      alert('你的浏览器不支持语音输入，请使用 Safari 或 Chrome');
+      return;
+    }
+
+    var btn = targetInput.parentElement.querySelector('.btn-voice');
+
+    // 如果正在录音，点击停止
+    if (activeRecognition) {
+      activeRecognition.stop();
+      activeRecognition = null;
+      btn.classList.remove('recording');
+      return;
+    }
+
+    var recognition = new SpeechRecognition();
+    recognition.lang = 'zh-CN';
+    recognition.continuous = false;
+    recognition.interimResults = true; // 显示中间结果
+    activeRecognition = recognition;
+
+    btn.classList.add('recording');
+
+    // 超时保护：10秒自动停止
+    var timeout = setTimeout(function() {
+      if (activeRecognition === recognition) {
+        recognition.stop();
+      }
+    }, 10000);
+
+    recognition.onresult = function(event) {
+      var transcript = '';
+      for (var i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      if (event.results[0].isFinal) {
+        if (targetInput.tagName === 'TEXTAREA') {
+          targetInput.value += (targetInput.value ? '\n' : '') + transcript;
+        } else {
+          targetInput.value = transcript;
+        }
+      } else {
+        // 临时结果：显示在 placeholder 里
+        targetInput.placeholder = transcript + '...';
+      }
+    };
+    recognition.onerror = function(e) {
+      clearTimeout(timeout);
+      activeRecognition = null;
+      btn.classList.remove('recording');
+      if (e.error === 'not-allowed') {
+        alert('请允许麦克风权限');
+      }
+    };
+    recognition.onend = function() {
+      clearTimeout(timeout);
+      activeRecognition = null;
+      btn.classList.remove('recording');
+      // 恢复 placeholder
+      targetInput.placeholder = targetInput.getAttribute('data-placeholder') || '';
+    };
+    // 保存原始 placeholder
+    targetInput.setAttribute('data-placeholder', targetInput.placeholder);
+    recognition.start();
+  }
+
   function createVoiceBtn() {
     return '';
   }
@@ -222,6 +294,7 @@ var Form = (function() {
     currentTags = [];
     currentLinks = [];
     currentObsParts = [];
+    currentPlantInputMode = 'voice';
     render();
     App.openModal(getTitle());
   }
@@ -235,6 +308,7 @@ var Form = (function() {
     currentTags = record.tags || [];
     currentLinks = record.links || [];
     currentObsParts = (record.observedParts || []).slice();
+    currentPlantInputMode = inferPlantInputMode(record);
 
     var photoIds = record.photoIds || [];
     if (photoIds.length > 0) {
@@ -261,6 +335,7 @@ var Form = (function() {
     currentTags = record.tags || [];
     currentLinks = record.links || [];
     currentObsParts = (record.observedParts || []).slice();
+    currentPlantInputMode = inferPlantInputMode(record);
 
     var photoIds = record.photoIds || [];
     if (photoIds.length > 0) {
@@ -358,12 +433,11 @@ var Form = (function() {
   function renderPlantForm() {
     var html = '';
 
-    // ===== Step 1: 观察记录 =====
-    html += '<div class="form-section">';
+    html += '<div class="form-section form-section-common">';
     html += '<div class="form-section-header">';
-    html += '<span class="form-section-badge step-obs">观察</span>';
-    html += '<span class="form-section-title">我的观察</span>';
-    html += '<span class="form-section-hint">不需要专业知识，选一选就好</span>';
+    html += '<span class="form-section-badge step-obs">基础</span>';
+    html += '<span class="form-section-title">先把现场抓住</span>';
+    html += '<span class="form-section-hint">名字、照片、时间地点先记下，再决定用哪种观察方式</span>';
     html += '</div>';
 
     html += '<div class="form-group">';
@@ -371,8 +445,59 @@ var Form = (function() {
     html += '<div class="input-with-voice"><input type="text" class="form-input" id="f-name" placeholder="如：银杏（不确定也可以写暂定名）">' + createVoiceBtn() + '</div>';
     html += '</div>';
 
-    // 照片
     html += renderPhotoUpload();
+
+    html += '<div class="form-row">';
+    html += '<div class="form-group"><label class="form-label">发现日期</label><input type="date" class="form-input" id="f-date" value="' + new Date().toISOString().split('T')[0] + '"></div>';
+    html += '<div class="form-group"><label class="form-label">发现地点</label><div class="input-with-voice"><input type="text" class="form-input" id="f-location" placeholder="选填">' + createVoiceBtn() + '</div></div>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="observation-mode-switch">';
+    html += '<button type="button" class="observation-mode-btn' + (currentPlantInputMode === 'voice' ? ' active' : '') + '" data-mode="voice" onclick="Form.setPlantInputMode(\'voice\')">';
+    html += '<span class="observation-mode-title">现场速记</span>';
+    html += '<span class="observation-mode-desc">适合正式记录前，先输入一大段现场描述</span>';
+    html += '</button>';
+    html += '<button type="button" class="observation-mode-btn' + (currentPlantInputMode === 'guided' ? ' active' : '') + '" data-mode="guided" onclick="Form.setPlantInputMode(\'guided\')">';
+    html += '<span class="observation-mode-title">结构化观察</span>';
+    html += '<span class="observation-mode-desc">适合回看整理，按叶花果固定特征</span>';
+    html += '</button>';
+    html += '</div>';
+
+    html += '<div class="form-section plant-observation-panel' + (currentPlantInputMode === 'voice' ? ' is-active' : ' is-muted') + '" id="plant-panel-voice">';
+    html += '<div class="form-section-header">';
+    html += '<span class="form-section-badge step-obs">速记</span>';
+    html += '<span class="form-section-title">现场速记</span>';
+    html += '<span class="form-section-hint">把你看到、摸到、闻到、联想到的都先写下来，不必按顺序</span>';
+    html += '</div>';
+
+    html += '<div class="voice-capture-box">';
+    html += '<div class="voice-capture-header">现场长记录</div>';
+    html += '<div class="voice-capture-hint">这里不做浏览器语音识别。你可以直接打字，或用手机输入法自己的语音转文字。</div>';
+    html += '<textarea class="form-textarea form-textarea-large" id="f-detailedObservation" rows="7" placeholder="例：灌木，高约一米多。枝条偏红褐，叶互生，叶面发亮，边缘细锯齿。花已经谢了，只见到残留的萼和一些小果。生在溪边半阴处，和绣球有点像，但叶脉更明显……"></textarea>';
+    html += '</div>';
+
+    html += '<div class="field-prompts">';
+    html += '<div class="field-prompt">可顺嘴带上：整体株型、叶序叶脉、花果状态、气味触感、生境、相似种、你的判断依据</div>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label class="form-label">第一眼为什么停下来</label>';
+    html += '<div class="input-with-voice"><textarea class="form-textarea" id="f-attraction" placeholder="记录最先抓住你的地方，比如颜色、姿态、光线、稀有感……"></textarea>' + createVoiceBtn() + '</div>';
+    html += '</div>';
+
+    html += '<div class="form-group">';
+    html += '<label class="form-label">拆解判断或补充细节</label>';
+    html += '<div class="input-with-voice"><textarea class="form-textarea" id="f-obsNote" rows="4" placeholder="这里写你后续的拆解，比如：像蔷薇科，但托叶没看清；果实可能还未成熟；需要下次补看花序……"></textarea>' + createVoiceBtn() + '</div>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="form-section plant-observation-panel' + (currentPlantInputMode === 'guided' ? ' is-active' : ' is-muted') + '" id="plant-panel-guided">';
+    html += '<div class="form-section-header">';
+    html += '<span class="form-section-badge step-obs">观察</span>';
+    html += '<span class="form-section-title">结构化观察</span>';
+    html += '<span class="form-section-hint">当你愿意拆开看时，再用这些选项把关键特征固定下来</span>';
+    html += '</div>';
 
     // 基础字段（始终显示）
     OBS_BASE.forEach(function(field) {
@@ -406,23 +531,7 @@ var Form = (function() {
     html += '<div class="obs-group-header">🍎 果实观察</div>';
     OBS_FRUIT.forEach(function(field) { html += renderChipField(field, ''); });
     html += '</div>';
-
-    html += '<div class="form-row">';
-    html += '<div class="form-group"><label class="form-label">发现日期</label><input type="date" class="form-input" id="f-date" value="' + new Date().toISOString().split('T')[0] + '"></div>';
-    html += '<div class="form-group"><label class="form-label">发现地点</label><div class="input-with-voice"><input type="text" class="form-input" id="f-location" placeholder="选填">' + createVoiceBtn() + '</div></div>';
     html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label class="form-label">是什么吸引了我</label>';
-    html += '<div class="input-with-voice"><textarea class="form-textarea" id="f-attraction" placeholder="记录你最初注意到它的原因...">' + '</textarea>' + createVoiceBtn() + '</div>';
-    html += '</div>';
-
-    html += '<div class="form-group">';
-    html += '<label class="form-label">其他补充（选填）</label>';
-    html += '<textarea class="form-textarea" id="f-obsNote" rows="3" placeholder="气味、触感、周围环境、特殊发现等自由记录..." style="resize:vertical; font-size:13px;"></textarea>';
-    html += '</div>';
-
-    html += '</div>'; // end step 1
 
     // ===== Step 2: 专业信息 =====
     html += '<div class="form-section">';
@@ -613,6 +722,7 @@ var Form = (function() {
       setVal('f-location', record.location);
       setVal('f-attraction', record.attraction);
       setVal('f-obsNote', record.obsNote);
+      setVal('f-detailedObservation', record.detailedObservation);
       setVal('f-notes', record.notes);
       setVal('f-thoughts', record.thoughts);
       // 恢复观察部位选择
@@ -651,7 +761,7 @@ var Form = (function() {
 
   function setVal(id, value) {
     var el = document.getElementById(id);
-    if (el && value !== undefined && value !== null) el.value = value;
+    if (el && value) el.value = value;
   }
 
   function getVal(id) {
@@ -679,6 +789,7 @@ var Form = (function() {
       record.location = getVal('f-location');
       record.attraction = getVal('f-attraction');
       record.obsNote = getVal('f-obsNote');
+      record.detailedObservation = getVal('f-detailedObservation');
       record.notes = getVal('f-notes');
       record.thoughts = getVal('f-thoughts');
       // 观察部位和字段
@@ -764,6 +875,7 @@ var Form = (function() {
       location: getVal('f-location'),
       attraction: getVal('f-attraction'),
       obsNote: getVal('f-obsNote'),
+      detailedObservation: getVal('f-detailedObservation'),
       // 也保存用户可能已填的专业字段
       latinName: getVal('f-latinName'),
       family: getVal('f-family'),
@@ -879,10 +991,32 @@ var Form = (function() {
     }
   }
 
+  // 语音
+  function handleVoice(btn) {
+    var container = btn.parentElement;
+    var input = container.querySelector('input, textarea');
+    if (input) startVoiceInput(input);
+  }
+
   function setType(type) {
     currentType = type;
+    if (type === 'plant' && !currentPlantInputMode) currentPlantInputMode = 'voice';
     render();
     document.getElementById('modal-title').textContent = getTitle();
+  }
+
+  function setPlantInputMode(mode) {
+    currentPlantInputMode = mode === 'guided' ? 'guided' : 'voice';
+    var panels = document.querySelectorAll('.plant-observation-panel');
+    panels.forEach(function(panel) {
+      var isActive = panel.id === 'plant-panel-' + currentPlantInputMode;
+      panel.classList.toggle('is-active', isActive);
+      panel.classList.toggle('is-muted', !isActive);
+    });
+    var buttons = document.querySelectorAll('.observation-mode-btn');
+    buttons.forEach(function(btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-mode') === currentPlantInputMode);
+    });
   }
 
   // ========== 粘贴识别功能 ==========
@@ -929,7 +1063,8 @@ var Form = (function() {
         { keys: ['发现日期', '日期'], field: 'date' },
         { keys: ['发现地点', '地点', '位置'], field: 'location' },
         { keys: ['是什么吸引了我', '吸引'], field: 'attraction' },
-        { keys: ['其他补充', '补充'], field: 'obsNote' },
+        { keys: ['详细观察', '详细记录', '语音观察'], field: 'detailedObservation' },
+        { keys: ['其他补充', '补充', '拆解判断'], field: 'obsNote' },
         { keys: ['学习笔记', '笔记'], field: 'notes' },
         { keys: ['我的思考', '思考'], field: 'thoughts' },
       ];
@@ -1020,7 +1155,8 @@ var Form = (function() {
         name: 'f-name', latinName: 'f-latinName', family: 'f-family',
         genus: 'f-genus', features: 'f-features', date: 'f-date',
         location: 'f-location', attraction: 'f-attraction',
-        obsNote: 'f-obsNote', notes: 'f-notes', thoughts: 'f-thoughts'
+        detailedObservation: 'f-detailedObservation', obsNote: 'f-obsNote',
+        notes: 'f-notes', thoughts: 'f-thoughts'
       };
     } else if (currentType === 'knowledge') {
       fieldMap = {
@@ -1064,6 +1200,15 @@ var Form = (function() {
       return match[1] + '-' + (m < 10 ? '0' + m : m) + '-' + (d < 10 ? '0' + d : d);
     }
     return str;
+  }
+
+  function inferPlantInputMode(record) {
+    if (!record || record.type !== 'plant') return 'voice';
+    if (record.detailedObservation) return 'voice';
+    var hasStructuredObservation = getAllObsFields().some(function(field) {
+      return !!record[field.id];
+    });
+    return hasStructuredObservation ? 'guided' : 'voice';
   }
 
   // ========== 智能推荐 ==========
@@ -1410,9 +1555,6 @@ var Form = (function() {
       previewImg.style.cssText = 'width:100%;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);';
       preview.appendChild(previewImg);
     }
-
-    var saveBtn = document.getElementById('chat-save-card-btn');
-    if (saveBtn) saveBtn.disabled = false;
   }
 
   function drawWatercolorBorder(ctx, W, H) {
@@ -1491,7 +1633,9 @@ var Form = (function() {
     removeTag: removeTag,
     toggleLink: toggleLink,
     toggleRecommendLink: toggleRecommendLink,
+    handleVoice: handleVoice,
     setType: setType,
+    setPlantInputMode: setPlantInputMode,
     togglePasteArea: togglePasteArea,
     applyPaste: applyPaste,
     downloadCard: downloadCard,

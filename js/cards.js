@@ -71,7 +71,7 @@ var Cards = (function() {
         html += '<div class="card-image" style="display:flex;align-items:center;justify-content:center;font-size:48px;background:var(--green-light);">🌿</div>';
       }
       html += '<div class="card-body">';
-      html += '<div class="card-title">' + escapeHtml(p.name || '未命名');
+      html += '<div class="card-title">' + escapeHtml(p.name || p.quickSummary || summarizePlant(p) || '未命名');
       if (p.status === 'observed') {
         html += ' <span class="badge-observed">已观察</span>';
       } else if (p.status === 'complete') {
@@ -286,6 +286,13 @@ var Cards = (function() {
     var div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  function summarizePlant(record) {
+    var text = record.detailedObservation || record.features || '';
+    text = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    return text.length > 18 ? text.slice(0, 18) + '…' : text;
   }
 
   function escapeAttr(text) {
