@@ -89,8 +89,11 @@ var App = (function() {
     html += renderObservedList();
 
     // 快速新建
+    html += '<div style="display:flex; gap:8px; margin-bottom:8px;">';
+    html += '<button class="btn btn-primary btn-sm" style="flex:1;" onclick="Form.openNew(\'plant\')">🌿 正式记录</button>';
+    html += '<button class="btn btn-orange btn-sm" style="flex:1;" onclick="Inbox.openQuickPhoto()">📷 速记速拍</button>';
+    html += '</div>';
     html += '<div style="display:flex; gap:8px; margin-bottom:20px;">';
-    html += '<button class="btn btn-primary btn-sm" style="flex:1;" onclick="Form.openNew(\'plant\')">🌿 记录植物</button>';
     html += '<button class="btn btn-blue btn-sm" style="flex:1;" onclick="Knowledge.openNoteEditor()">📝 写笔记</button>';
     html += '</div>';
 
@@ -112,8 +115,8 @@ var App = (function() {
       html += '<div class="weekly-empty">';
       html += '<div class="weekly-empty-text">这周还没开始记录，今天拍一张植物照片开始吧</div>';
       html += '<div class="weekly-empty-actions">';
-      html += '<button class="btn btn-primary btn-sm" style="flex:1;" onclick="Form.openNew(\'plant\')">🌿 记录植物</button>';
-      html += '<button class="btn btn-blue btn-sm" style="flex:1;" onclick="Knowledge.openNoteEditor()">📝 写笔记</button>';
+      html += '<button class="btn btn-primary btn-sm" style="flex:1;" onclick="Form.openNew(\'plant\')">🌿 正式记录</button>';
+      html += '<button class="btn btn-orange btn-sm" style="flex:1;" onclick="Inbox.openQuickPhoto()">📷 速记速拍</button>';
       html += '</div>';
       html += '</div>';
       return html;
@@ -255,7 +258,7 @@ var App = (function() {
         html += '<div class="knowledge-icon" style="background:var(--green-light);">🌿</div>';
       }
       html += '<div style="flex:1; min-width:0;">';
-      html += '<div style="font-size:14px; font-weight:500;">' + escapeHtml(item.name || '未命名') + '</div>';
+      html += '<div style="font-size:14px; font-weight:500;">' + escapeHtml(item.name || item.quickSummary || summarizeRecord(item) || '未命名') + '</div>';
       html += '<div style="font-size:12px; color:var(--gray-400);">' + formatDate(item.updatedAt) + '</div>';
       html += '</div>';
       // AI 识别按钮（有照片时直接进 AI）
@@ -340,6 +343,12 @@ var App = (function() {
         return g.fields.some(function(f) { return record[f.key]; });
       });
       var hasOldObs = oldFields.some(function(f) { return record[f.key]; });
+      if (record.detailedObservation) {
+        html += '<div class="detail-obs-section detail-obs-longtext">';
+        html += '<div class="detail-obs-title">详细观察</div>';
+        html += '<div class="detail-obs-paragraph">' + escapeHtml(record.detailedObservation) + '</div>';
+        html += '</div>';
+      }
       if (hasNewObs || hasOldObs) {
         html += '<div class="detail-obs-section">';
         html += '<div class="detail-obs-title">我的观察</div>';
@@ -476,7 +485,7 @@ var App = (function() {
     html += '<button class="btn btn-danger" onclick="App.deleteFromDetail(\'' + record.id + '\')">删除</button>';
     html += '</div>';
 
-    var title = record.name || record.title || '详情';
+    var title = record.name || record.title || record.quickSummary || summarizeRecord(record) || '详情';
     document.getElementById('modal-body').innerHTML = html;
     openModal(title);
 
@@ -778,6 +787,13 @@ var App = (function() {
 
   function escapeAttr(text) {
     return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  }
+
+  function summarizeRecord(record) {
+    var text = record.detailedObservation || record.notes || record.content || record.observation || record.attraction || '';
+    text = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    return text.length > 24 ? text.slice(0, 24) + '…' : text;
   }
 
   // 初始化

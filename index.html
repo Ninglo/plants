@@ -12,7 +12,7 @@
   <script>
     // 自动检测新版本：即使 index.html 被缓存，也能发现更新并刷新
     (function() {
-      var LOCAL_VER = 48;
+      var LOCAL_VER = 52;
       fetch('version.txt?_=' + Date.now()).then(function(r) {
         return r.text();
       }).then(function(v) {
@@ -29,7 +29,7 @@
     })();
   </script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap">
-  <link rel="stylesheet" href="css/style.css?v=48">
+  <link rel="stylesheet" href="css/style.css?v=52">
 </head>
 <body>
   <!-- 顶部栏 -->
@@ -49,7 +49,7 @@
   </main>
 
   <!-- 快速拍照浮动按钮 -->
-  <button class="fab" id="btn-quick-photo" title="快速拍照记录">
+  <button class="fab" id="btn-quick-photo" title="速记速拍">
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
       <circle cx="12" cy="13" r="4"/>
@@ -110,17 +110,17 @@
   </div>
 
   <!-- JS 文件按依赖顺序加载 -->
-  <script src="js/photodb.js?v=48"></script>
-  <script src="js/storage.js?v=48"></script>
-  <script src="js/sync.js?v=48"></script>
-  <script src="js/recommend.js?v=48"></script>
-  <script src="js/form.js?v=48"></script>
-  <script src="js/inbox.js?v=48"></script>
-  <script src="js/timeline.js?v=48"></script>
-  <script src="js/cards.js?v=48"></script>
-  <script src="js/knowledge.js?v=48"></script>
-  <script src="js/graph.js?v=48"></script>
-  <script src="js/chat.js?v=48"></script>
-  <script src="js/app.js?v=48"></script>
+  <script src="js/photodb.js?v=52"></script>
+  <script src="js/storage.js?v=52"></script>
+  <script src="js/sync.js?v=52"></script>
+  <script src="js/recommend.js?v=52"></script>
+  <script src="js/form.js?v=52"></script>
+  <script src="js/inbox.js?v=52"></script>
+  <script src="js/timeline.js?v=52"></script>
+  <script src="js/cards.js?v=52"></script>
+  <script src="js/knowledge.js?v=52"></script>
+  <script src="js/graph.js?v=52"></script>
+  <script src="js/chat.js?v=52"></script>
+  <script src="js/app.js?v=52"></script>
 </body>
 </html>

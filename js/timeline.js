@@ -49,8 +49,8 @@ var Timeline = (function() {
       var dotClass = r.type === 'knowledge' ? 'knowledge' : r.type === 'ecology' ? 'ecology' : '';
       var badgeClass = r.type === 'plant' ? 'badge-plant' : r.type === 'knowledge' ? 'badge-knowledge' : 'badge-ecology';
       var typeLabel = r.type === 'plant' ? '🌿 植物' : r.type === 'knowledge' ? '📖 知识' : '🔍 发现';
-      var name = r.name || r.title || '未命名';
-      var excerpt = r.notes || r.content || r.attraction || r.observation || '';
+      var name = r.name || r.title || r.quickSummary || summarizeTimelineRecord(r) || '未命名';
+      var excerpt = r.notes || r.content || r.attraction || r.observation || r.detailedObservation || '';
 
       html += '<div class="timeline-item" onclick="App.showDetail(\'' + r.id + '\')">';
       html += '<div class="timeline-dot ' + dotClass + '"></div>';
@@ -127,6 +127,13 @@ var Timeline = (function() {
     var div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  function summarizeTimelineRecord(record) {
+    var text = record.detailedObservation || record.notes || record.content || record.observation || '';
+    text = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    return text.length > 20 ? text.slice(0, 20) + '…' : text;
   }
 
   return {

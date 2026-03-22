@@ -365,6 +365,92 @@ body::before {
 .type-btn.active-knowledge { border-color: var(--blue); background: var(--blue-light); color: #5a8a9e; }
 .type-btn.active-ecology { border-color: var(--orange); background: var(--orange-light); color: #a07040; }
 
+/* ========== 植物观察模式 ========== */
+.observation-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.observation-mode-btn {
+  border: 1.5px solid rgba(221,217,208,0.7);
+  background: rgba(255,254,249,0.72);
+  border-radius: var(--radius);
+  padding: 14px 12px;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.observation-mode-btn.active {
+  border-color: var(--green);
+  background: linear-gradient(180deg, rgba(240,246,232,0.95), rgba(255,254,249,0.92));
+  box-shadow: 0 8px 20px rgba(123,168,98,0.08);
+}
+.observation-mode-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+.observation-mode-desc {
+  font-size: 12px;
+  color: var(--gray-500);
+  line-height: 1.5;
+}
+.plant-observation-panel {
+  transition: opacity 0.2s, transform 0.2s, border-color 0.2s, background 0.2s;
+}
+.plant-observation-panel.is-muted {
+  opacity: 0.58;
+  border-style: dashed;
+}
+.plant-observation-panel.is-active {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+.voice-capture-box {
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, rgba(240,246,232,0.72), rgba(255,254,249,0.88));
+  border: 1px solid rgba(123,168,98,0.18);
+  margin-bottom: 14px;
+}
+.voice-capture-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--green-dark);
+  margin-bottom: 4px;
+}
+.voice-capture-hint {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-bottom: 10px;
+}
+.input-with-voice-large .btn-voice {
+  width: 44px;
+  height: 44px;
+}
+.form-textarea-large {
+  min-height: 160px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.field-prompts {
+  margin-bottom: 14px;
+}
+.field-prompt {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255,243,224,0.72);
+  border: 1px dashed rgba(212,163,115,0.45);
+  color: #8a643e;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 /* ========== 标签输入 ========== */
 .tags-container {
   display: flex;
@@ -1516,6 +1602,12 @@ img[data-photo-id] {
   color: var(--gray-700);
   margin-bottom: 10px;
 }
+.detail-obs-paragraph {
+  white-space: pre-wrap;
+  font-size: 14px;
+  color: var(--gray-700);
+  line-height: 1.8;
+}
 .detail-obs-chips {
   display: flex;
   flex-wrap: wrap;
@@ -1569,6 +1661,12 @@ img[data-photo-id] {
 }
 .btn-secondary:active {
   background: var(--gray-100);
+}
+
+@media (max-width: 640px) {
+  .observation-mode-switch {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ========== 云端同步设置 ========== */
