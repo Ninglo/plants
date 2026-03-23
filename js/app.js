@@ -1,8 +1,12 @@
 /* ========== 主应用入口 ========== */
 var App = (function() {
   var currentView = 'home';
+  var viewportBound = false;
+  var keyboardOpen = false;
 
   function init() {
+    bindViewportMetrics();
+
     // 绑定底部导航
     document.querySelectorAll('.nav-item').forEach(function(btn) {
       btn.addEventListener('click', function() {
@@ -65,6 +69,34 @@ var App = (function() {
     }
     // 异步加载照片
     Storage.loadPhotosInDom();
+  }
+
+  function updateViewportMetrics() {
+    var vv = window.visualViewport;
+    var height = vv ? Math.round(vv.height) : window.innerHeight;
+    var offsetTop = vv ? Math.round(vv.offsetTop) : 0;
+    var bottomGap = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
+    var isKeyboardOpen = bottomGap > 110;
+
+    document.documentElement.style.setProperty('--app-vvh', height + 'px');
+    document.documentElement.style.setProperty('--viewport-offset-top', offsetTop + 'px');
+    document.documentElement.style.setProperty('--keyboard-inset', bottomGap + 'px');
+    document.documentElement.style.setProperty('--safe-area-bottom-active', isKeyboardOpen ? '0px' : 'env(safe-area-inset-bottom, 0px)');
+
+    keyboardOpen = isKeyboardOpen;
+    document.body.classList.toggle('keyboard-open', keyboardOpen);
+  }
+
+  function bindViewportMetrics() {
+    if (viewportBound) return;
+    updateViewportMetrics();
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateViewportMetrics);
+      window.visualViewport.addEventListener('scroll', updateViewportMetrics);
+    }
+    window.addEventListener('resize', updateViewportMetrics);
+    window.addEventListener('orientationchange', updateViewportMetrics);
+    viewportBound = true;
   }
 
   function renderHome() {
@@ -760,11 +792,13 @@ var App = (function() {
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-overlay').classList.add('show');
     document.body.style.overflow = 'hidden';
+    document.body.classList.add('modal-open');
   }
 
   function closeModal() {
     document.getElementById('modal-overlay').classList.remove('show');
     document.body.style.overflow = '';
+    document.body.classList.remove('modal-open');
     if (window.Chat && typeof Chat.onModalClosed === 'function') {
       Chat.onModalClosed();
     }

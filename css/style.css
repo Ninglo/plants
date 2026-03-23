@@ -39,6 +39,14 @@
   --nav-height: 62px;
   --top-bar-height: 54px;
   --fab-size: 58px;
+  --app-vvh: 100dvh;
+  --viewport-offset-top: 0px;
+  --keyboard-inset: 0px;
+  --safe-area-bottom-active: env(safe-area-inset-bottom, 0px);
+  --chat-vvh: 100dvh;
+  --chat-offset-top: 0px;
+  --chat-bottom-gap: 0px;
+  --chat-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ========== 重置 ========== */
@@ -100,10 +108,10 @@ body::before {
 /* ========== 主内容 ========== */
 .main-content {
   padding-top: calc(var(--top-bar-height) + 14px);
-  padding-bottom: calc(var(--nav-height) + 28px);
+  padding-bottom: calc(var(--nav-height) + 28px + var(--safe-area-bottom-active));
   padding-left: 16px;
   padding-right: 16px;
-  min-height: 100vh;
+  min-height: var(--app-vvh);
 }
 
 /* ========== 底部导航 ========== */
@@ -121,7 +129,7 @@ body::before {
   justify-content: space-around;
   border-top: 1px solid rgba(221,217,208,0.3);
   z-index: 100;
-  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-bottom: var(--safe-area-bottom-active);
 }
 .nav-item {
   display: flex;
@@ -143,7 +151,7 @@ body::before {
 /* ========== 浮动按钮 ========== */
 .fab {
   position: fixed;
-  bottom: calc(var(--nav-height) + 18px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--nav-height) + 18px + var(--safe-area-bottom-active));
   right: 18px;
   width: var(--fab-size);
   height: var(--fab-size);
@@ -171,6 +179,7 @@ body::before {
   align-items: flex-end;
   justify-content: center;
   backdrop-filter: blur(2px);
+  padding-top: var(--viewport-offset-top);
 }
 .modal-overlay.show {
   display: flex;
@@ -183,24 +192,31 @@ body::before {
   background: var(--white);
   width: 100%;
   max-width: 600px;
-  max-height: 90vh;
+  max-height: calc(var(--app-vvh) - 12px);
   border-radius: 18px 18px 0 0;
   overflow-y: auto;
   animation: slideUp 0.3s ease;
 }
 .modal-overlay.chat-mode .modal {
   width: min(100%, 720px);
-  max-height: calc(var(--chat-vvh, 100dvh) - 16px);
+  height: calc(var(--chat-vvh) - 16px);
+  max-height: none;
   margin: 8px auto;
   border-radius: 22px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+.modal-overlay.chat-mode .modal-header {
+  flex-shrink: 0;
 }
 .modal-overlay.chat-mode .modal-body {
   padding: 0;
   overflow: hidden;
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 @keyframes slideUp {
   from { transform: translateY(100%); }
@@ -1778,6 +1794,7 @@ img[data-photo-id] {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
   margin: 0;
   background: var(--white);
 }
@@ -1787,15 +1804,19 @@ img[data-photo-id] {
   color: var(--gray-600);
   background: rgba(255, 254, 249, 0.85);
   border-bottom: 1px solid rgba(221,217,208,0.35);
+  flex-shrink: 0;
 }
 .chat-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 18px 18px 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 .chat-bubble {
   max-width: 92%;
@@ -1833,12 +1854,10 @@ img[data-photo-id] {
 }
 .chat-input-bar {
   display: flex; gap: 10px;
-  padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+  padding: 12px 14px calc(14px + var(--chat-safe-bottom));
   border-top: 1px solid var(--gray-200);
   background: var(--white);
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
+  flex-shrink: 0;
 }
 .chat-image-btn {
   width: 40px;
@@ -1881,6 +1900,7 @@ img[data-photo-id] {
   display: flex; gap: 8px;
   padding: 8px 14px 10px;
   background: var(--white);
+  flex-shrink: 0;
 }
 .chat-extract-btn {
   flex: 1;
@@ -1949,12 +1969,12 @@ img[data-photo-id] {
     padding: 14px;
   }
   .modal-overlay.chat-mode {
-    align-items: center;
+    align-items: flex-start;
     padding: 6px;
   }
   .modal-overlay.chat-mode .modal {
     width: calc(100% - 4px);
-    max-height: calc(var(--chat-vvh, 100dvh) - 12px);
+    height: calc(var(--chat-vvh) - 12px);
     margin: 4px auto;
     border-radius: 20px;
   }
@@ -1979,7 +1999,7 @@ img[data-photo-id] {
   .chat-messages { padding: 14px 14px 12px; gap: 12px; }
   .chat-bubble { max-width: 94%; font-size: 14px; line-height: 1.56; padding: 10px 13px; }
   .chat-image-btn { width: 36px; height: 36px; font-size: 16px; }
-  .chat-input-bar { gap: 8px; padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .chat-input-bar { gap: 8px; padding: 10px 12px calc(12px + var(--chat-safe-bottom)); }
   .chat-input { font-size: 14px; padding: 10px 12px; }
   .chat-send-btn { font-size: 13px; padding: 9px 12px; }
   .chat-bottom-bar { padding: 8px 12px 10px; }

@@ -50,8 +50,18 @@ var Chat = (function() {
   }
 
   function updateChatViewportHeight() {
-    var h = window.visualViewport ? Math.floor(window.visualViewport.height) : window.innerHeight;
+    var vv = window.visualViewport;
+    var h = vv ? Math.round(vv.height) : window.innerHeight;
+    var offsetTop = vv ? Math.round(vv.offsetTop) : 0;
+    var bottomGap = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
+    var keyboardOpen = bottomGap > 110;
+
     document.documentElement.style.setProperty('--chat-vvh', h + 'px');
+    document.documentElement.style.setProperty('--chat-offset-top', offsetTop + 'px');
+    document.documentElement.style.setProperty('--chat-bottom-gap', bottomGap + 'px');
+    document.documentElement.style.setProperty('--chat-safe-bottom', keyboardOpen ? '0px' : 'env(safe-area-inset-bottom, 0px)');
+
+    document.body.classList.toggle('chat-keyboard-open', keyboardOpen);
   }
 
   function bindChatViewport() {
@@ -73,6 +83,10 @@ var Chat = (function() {
     }
     window.removeEventListener('orientationchange', updateChatViewportHeight);
     document.documentElement.style.removeProperty('--chat-vvh');
+    document.documentElement.style.removeProperty('--chat-offset-top');
+    document.documentElement.style.removeProperty('--chat-bottom-gap');
+    document.documentElement.style.removeProperty('--chat-safe-bottom');
+    document.body.classList.remove('chat-keyboard-open');
     viewportBound = false;
   }
 
@@ -82,8 +96,23 @@ var Chat = (function() {
     input.addEventListener('focus', function() {
       setTimeout(function() {
         updateChatViewportHeight();
+        keepComposerVisible();
       }, 120);
     });
+    input.addEventListener('blur', function() {
+      setTimeout(updateChatViewportHeight, 80);
+    });
+  }
+
+  function keepComposerVisible() {
+    var container = document.getElementById('chat-messages');
+    var inputBar = document.querySelector('.chat-input-bar');
+    if (!container || !inputBar) return;
+    var rect = inputBar.getBoundingClientRect();
+    var visibleHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    if (rect.bottom > visibleHeight - 8) {
+      container.scrollTop += rect.bottom - visibleHeight + 12;
+    }
   }
 
   function wait(ms) {
@@ -475,6 +504,7 @@ var Chat = (function() {
     if (!overlay.classList.contains('show')) {
       overlay.classList.add('show');
       document.body.style.overflow = 'hidden';
+      document.body.classList.add('modal-open');
     }
     bindChatViewport();
     setupInputFocusBehavior();
@@ -1195,6 +1225,7 @@ var Chat = (function() {
     unbindChatViewport();
     var overlay = document.getElementById('modal-overlay');
     if (overlay) overlay.classList.remove('chat-mode');
+    document.body.classList.remove('chat-keyboard-open');
   }
 
   return {
