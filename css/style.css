@@ -180,6 +180,7 @@ body::before {
   justify-content: center;
   backdrop-filter: blur(2px);
   padding-top: var(--viewport-offset-top);
+  padding-bottom: var(--keyboard-inset);
 }
 .modal-overlay.show {
   display: flex;
@@ -194,8 +195,19 @@ body::before {
   max-width: 600px;
   max-height: calc(var(--app-vvh) - 12px);
   border-radius: 18px 18px 0 0;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   animation: slideUp 0.3s ease;
+}
+.modal-header {
+  flex-shrink: 0;
+}
+.modal-body {
+  padding: 18px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
 }
 .modal-overlay.chat-mode .modal {
   width: min(100%, 720px);
@@ -236,9 +248,6 @@ body::before {
 .modal-title {
   font-size: 18px;
   font-weight: 600;
-}
-.modal-body {
-  padding: 18px;
 }
 
 /* ========== 通用按钮 ========== */
@@ -1970,7 +1979,7 @@ img[data-photo-id] {
   }
   .modal-overlay.chat-mode {
     align-items: flex-start;
-    padding: 6px;
+    padding: 6px 6px 0;
   }
   .modal-overlay.chat-mode .modal {
     width: calc(100% - 4px);

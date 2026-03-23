@@ -6,6 +6,7 @@ var App = (function() {
 
   function init() {
     bindViewportMetrics();
+    bindModalInputViewport();
 
     // 绑定底部导航
     document.querySelectorAll('.nav-item').forEach(function(btn) {
@@ -97,6 +98,39 @@ var App = (function() {
     window.addEventListener('resize', updateViewportMetrics);
     window.addEventListener('orientationchange', updateViewportMetrics);
     viewportBound = true;
+  }
+
+  function bindModalInputViewport() {
+    var overlay = document.getElementById('modal-overlay');
+    if (!overlay) return;
+
+    overlay.addEventListener('focusin', function(e) {
+      var target = e.target;
+      if (!target || !target.matches || !target.matches('input, textarea, select, [contenteditable="true"]')) return;
+      if (target.id === 'chat-input' || target.closest('.chat-container')) return;
+
+      setTimeout(function() {
+        updateViewportMetrics();
+        keepModalFieldVisible(target);
+      }, 140);
+    });
+
+    overlay.addEventListener('focusout', function() {
+      setTimeout(updateViewportMetrics, 90);
+    });
+  }
+
+  function keepModalFieldVisible(field) {
+    var overlay = document.getElementById('modal-overlay');
+    if (!overlay || !overlay.classList.contains('show')) return;
+    var modalBody = document.getElementById('modal-body');
+    if (!modalBody || !field || !modalBody.contains(field)) return;
+
+    var rect = field.getBoundingClientRect();
+    var visibleBottom = (window.visualViewport ? window.visualViewport.height : window.innerHeight) - 20;
+    if (rect.bottom > visibleBottom || rect.top < 72) {
+      field.scrollIntoView({ block: 'center', inline: 'nearest' });
+    }
   }
 
   function renderHome() {
