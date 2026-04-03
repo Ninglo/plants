@@ -842,20 +842,8 @@ var App = (function() {
     renderView(currentView);
   }
 
-  function formatDate(isoString) {
-    var d = new Date(isoString);
-    return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate();
-  }
-
-  function escapeHtml(text) {
-    var div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  function escapeAttr(text) {
-    return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-  }
+  // formatDate、escapeHtml、escapeAttr 已提取到 utils.js
+  var formatDate = formatDateSimple;
 
   function summarizeRecord(record) {
     var text = record.detailedObservation || record.notes || record.content || record.observation || record.attraction || '';

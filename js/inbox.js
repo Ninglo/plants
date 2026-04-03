@@ -265,10 +265,8 @@ var Inbox = (function() {
     return html;
   }
 
-  function formatDate(isoString) {
-    var d = new Date(isoString);
-    return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate();
-  }
+  // formatDate 已提取到 utils.js
+  var formatDate = formatDateSimple;
 
   function summarizeText(text) {
     var clean = String(text || '').replace(/\s+/g, ' ').trim();

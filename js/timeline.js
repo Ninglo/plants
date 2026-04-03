@@ -123,11 +123,7 @@ var Timeline = (function() {
     return d.getFullYear() + '年' + months[d.getMonth()] + d.getDate() + '日';
   }
 
-  function escapeHtml(text) {
-    var div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
+  // escapeHtml 已提取到 utils.js
 
   function summarizeTimelineRecord(record) {
     var text = record.detailedObservation || record.notes || record.content || record.observation || '';

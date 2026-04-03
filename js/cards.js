@@ -282,11 +282,7 @@ var Cards = (function() {
     }, 2000);
   }
 
-  function escapeHtml(text) {
-    var div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
+  // escapeHtml 已提取到 utils.js
 
   function summarizePlant(record) {
     var text = record.detailedObservation || record.features || '';
@@ -295,9 +291,7 @@ var Cards = (function() {
     return text.length > 18 ? text.slice(0, 18) + '…' : text;
   }
 
-  function escapeAttr(text) {
-    return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-  }
+  // escapeAttr 已提取到 utils.js
 
   return {
     render: render,

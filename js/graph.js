@@ -572,11 +572,7 @@ var Graph = (function() {
     return count;
   }
 
-  function escapeHtml(text) {
-    var div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
+  // escapeHtml 已提取到 utils.js
 
   return {
     render: render,

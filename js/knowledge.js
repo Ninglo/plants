@@ -16,12 +16,7 @@ var Knowledge = (function() {
     return THEMES[0];
   }
 
-  // ===== 工具函数 =====
-  function escapeHtml(text) {
-    var div = document.createElement('div');
-    div.textContent = text || '';
-    return div.innerHTML;
-  }
+  // escapeHtml 已提取到 utils.js
 
   function normalizeBlocks(note) {
     if (note.blocks && note.blocks.length > 0) return note.blocks;
