@@ -74,6 +74,8 @@ var Cards = (function() {
       html += '<div class="card-title">' + escapeHtml(p.name || p.quickSummary || summarizePlant(p) || '未命名');
       if (p.status === 'observed') {
         html += ' <span class="badge-observed">已观察</span>';
+      } else if (p.status === 'ready') {
+        html += ' <span class="badge-observed" style="background:var(--green-light); color:var(--green);">待确认</span>';
       } else if (p.status === 'complete') {
         html += ' <span class="badge-collected">已收录</span>';
       }

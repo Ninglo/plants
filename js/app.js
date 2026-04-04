@@ -151,6 +151,9 @@ var App = (function() {
     // 待处理队列
     html += Inbox.renderPendingList();
 
+    // 待确认（数据已完整，等用户确认）
+    html += renderReadyList();
+
     // 待补充（已观察未收录）
     html += renderObservedList();
 
@@ -309,6 +312,30 @@ var App = (function() {
     return String(date.getMonth() + 1).padStart(2, '0') + '/' + String(date.getDate()).padStart(2, '0');
   }
 
+  function renderReadyList() {
+    var ready = Storage.getReady();
+    if (ready.length === 0) return '';
+
+    ready.sort(function(a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); });
+
+    var html = '<div class="section-title">待确认 <span style="font-size:12px; color:var(--gray-400); font-weight:400;">' + ready.length + ' 条已补全</span></div>';
+    ready.forEach(function(item) {
+      html += '<div class="knowledge-item observed-item" onclick="App.showDetail(\'' + item.id + '\')">';
+      if (item.photoIds && item.photoIds[0]) {
+        html += '<img style="width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0;" data-photo-id="' + item.photoIds[0] + '" src="' + Storage.BLANK_IMG + '">';
+      } else {
+        html += '<div class="knowledge-icon" style="background:var(--green-light);">🌿</div>';
+      }
+      html += '<div style="flex:1; min-width:0;">';
+      html += '<div style="font-size:14px; font-weight:500;">' + escapeHtml(item.name || '未命名') + '</div>';
+      html += '<div style="font-size:12px; color:var(--gray-400);">' + escapeHtml([item.family, item.location].filter(Boolean).join(' · ')) + '</div>';
+      html += '</div>';
+      html += '<span class="badge-observed" style="flex-shrink:0; background:var(--green-light); color:var(--green);">待确认</span>';
+      html += '</div>';
+    });
+    return html;
+  }
+
   function renderObservedList() {
     var observed = Storage.getObserved();
     if (observed.length === 0) return '';
@@ -366,6 +393,8 @@ var App = (function() {
     html += '<span class="card-type-badge ' + badgeClass + '" style="margin-bottom:12px;">' + typeLabel + '</span>';
     if (record.type === 'plant' && record.status === 'observed') {
       html += ' <span class="badge-observed" style="margin-bottom:12px;">已观察</span>';
+    } else if (record.type === 'plant' && record.status === 'ready') {
+      html += ' <span class="badge-observed" style="margin-bottom:12px; background:var(--green-light); color:var(--green);">待确认</span>';
     } else if (record.type === 'plant' && record.status === 'complete') {
       html += ' <span class="badge-collected" style="margin-bottom:12px;">已收录</span>';
     }
@@ -535,8 +564,12 @@ var App = (function() {
 
     // 操作按钮
     html += '<div class="detail-actions">';
+    // 待确认 → 确认收录按钮
+    if (record.type === 'plant' && record.status === 'ready') {
+      html += '<button class="btn btn-primary btn-block" onclick="App.confirmReady(\'' + record.id + '\')">确认收录</button>';
+      html += '<button class="btn btn-block" style="margin-top:8px;" onclick="Form.openEdit(\'' + record.id + '\')">修改信息</button>';
     // 已观察且有照片 → AI 按钮作为最醒目的主操作
-    if (record.type === 'plant' && record.status === 'observed' && record.photoIds && record.photoIds.length > 0) {
+    } else if (record.type === 'plant' && record.status === 'observed' && record.photoIds && record.photoIds.length > 0) {
       html += '<button class="btn btn-primary btn-block" style="background:linear-gradient(135deg, #e0a060, #d4883a); border:none;" onclick="Chat.openChat(\'' + record.id + '\')">📋 AI 识别补全</button>';
       html += '<button class="btn btn-block" style="margin-top:8px;" onclick="Form.openEdit(\'' + record.id + '\')">手动补充信息</button>';
     } else if (record.type === 'plant' && record.status === 'observed') {
@@ -565,6 +598,15 @@ var App = (function() {
       '<div class="detail-field-label">' + label + '</div>' +
       '<div class="detail-field-value">' + escapeHtml(value) + '</div>' +
       '</div>';
+  }
+
+  function confirmReady(id) {
+    var record = Storage.update(id, { status: 'complete' });
+    if (record) {
+      closeModal();
+      refreshView();
+      Form.showCelebration(record);
+    }
   }
 
   function deleteFromDetail(id) {
@@ -861,6 +903,7 @@ var App = (function() {
     closeModal: closeModal,
     refreshView: refreshView,
     showDetail: showDetail,
+    confirmReady: confirmReady,
     deleteFromDetail: deleteFromDetail,
     filterByTag: filterByTag,
     doExport: doExport,

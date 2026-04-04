@@ -97,6 +97,11 @@ var Storage = (function() {
     return getAll().filter(function(r) { return r.status === 'observed'; });
   }
 
+  // 获取待确认的记录（数据已完整，等待用户确认收录）
+  function getReady() {
+    return getAll().filter(function(r) { return r.status === 'ready'; });
+  }
+
   // 按标签筛选
   function getByTag(tag) {
     return getAll().filter(function(r) {
@@ -135,7 +140,8 @@ var Storage = (function() {
       totalNotes: noteCount + knowledgeCount + ecologyCount,
       totalFamilies: Object.keys(families).length,
       pendingCount: getPending().length,
-      observedCount: getObserved().length
+      observedCount: getObserved().length,
+      readyCount: getReady().length
     };
   }
 
@@ -347,6 +353,7 @@ var Storage = (function() {
     getPending: getPending,
     getCompleted: getCompleted,
     getObserved: getObserved,
+    getReady: getReady,
     getByTag: getByTag,
     getAllTags: getAllTags,
     getStats: getStats,
