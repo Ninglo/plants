@@ -3,6 +3,24 @@ var App = (function() {
   var currentView = 'home';
   var viewportBound = false;
   var keyboardOpen = false;
+  var HOME_QUICKLOOKS = [
+    {
+      name: '山桂花',
+      latin: '木犀属方向',
+      accent: 'gold',
+      summary: '先按桂花系看，不急着抢到具体种。',
+      cues: ['叶腋簇生', '小黄花更像4裂', '单叶革质'],
+      confusion: '别被“5瓣”口述带偏。若是芒果，常见是枝顶大型圆锥花序。'
+    },
+    {
+      name: '木香花',
+      latin: 'Rosa banksiae 组',
+      accent: 'green',
+      summary: '先按蔷薇属攀援灌木收，不先抢具体园艺型。',
+      cues: ['披垂蔓生', '复叶常见3-5小叶', '春季密开白色重瓣小花'],
+      confusion: '别只看“白花瀑布”就叫绣线菊。先看它是不是攀援、叶是不是复叶。'
+    }
+  ];
 
   function init() {
     bindViewportMetrics();
@@ -167,7 +185,42 @@ var App = (function() {
     html += '</div>';
 
     html += renderWeeklyProgress(records);
+    html += renderPlantQuicklook();
 
+    return html;
+  }
+
+  function renderPlantQuicklook() {
+    var html = '';
+
+    html += '<div class="section-title">';
+    html += '<span>植物速览</span>';
+    html += '<span class="count">最近复习</span>';
+    html += '</div>';
+    html += '<div class="quicklook-strip">';
+
+    HOME_QUICKLOOKS.forEach(function(item) {
+      html += '<div class="quicklook-card ' + item.accent + '">';
+      html += '<div class="quicklook-card-head">';
+      html += '<div>';
+      html += '<div class="quicklook-name">' + item.name + '</div>';
+      html += '<div class="quicklook-latin">' + item.latin + '</div>';
+      html += '</div>';
+      html += '<div class="quicklook-badge">复习卡</div>';
+      html += '</div>';
+      html += '<div class="quicklook-summary">' + item.summary + '</div>';
+      html += '<div class="quicklook-label">抓手</div>';
+      html += '<div class="quicklook-tags">';
+      item.cues.forEach(function(cue) {
+        html += '<span class="quicklook-tag">' + cue + '</span>';
+      });
+      html += '</div>';
+      html += '<div class="quicklook-label">最易混点</div>';
+      html += '<div class="quicklook-confusion">' + item.confusion + '</div>';
+      html += '</div>';
+    });
+
+    html += '</div>';
     return html;
   }
 

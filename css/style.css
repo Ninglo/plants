@@ -803,6 +803,102 @@ body::before {
   gap: 8px;
 }
 
+/* ========== 首页植物速览 ========== */
+.quicklook-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(268px, 82%);
+  gap: 12px;
+  overflow-x: auto;
+  padding: 2px 2px 10px;
+  margin: 0 -2px 8px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.quicklook-strip::-webkit-scrollbar {
+  display: none;
+}
+.quicklook-card {
+  scroll-snap-align: start;
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(221,217,208,0.45);
+  background: rgba(255,254,249,0.86);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.quicklook-card.gold {
+  background:
+    linear-gradient(180deg, rgba(255,246,212,0.9), rgba(255,252,245,0.92));
+  border-color: rgba(223,183,70,0.24);
+}
+.quicklook-card.green {
+  background:
+    linear-gradient(180deg, rgba(228,243,220,0.9), rgba(255,252,245,0.92));
+  border-color: rgba(116,164,93,0.24);
+}
+.quicklook-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.quicklook-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gray-800);
+}
+.quicklook-latin {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-top: 2px;
+}
+.quicklook-badge {
+  font-size: 11px;
+  color: var(--gray-600);
+  background: rgba(255,255,255,0.55);
+  border: 1px solid rgba(255,255,255,0.65);
+  border-radius: 999px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+.quicklook-summary {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--gray-700);
+  margin-bottom: 12px;
+}
+.quicklook-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gray-500);
+  margin-bottom: 8px;
+}
+.quicklook-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.quicklook-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--gray-700);
+  background: rgba(255,255,255,0.62);
+  border: 1px solid rgba(227,223,214,0.85);
+}
+.quicklook-confusion {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--gray-600);
+}
+
 /* ========== 首页大图卡片 ========== */
 .recent-photo-card {
   position: relative;
