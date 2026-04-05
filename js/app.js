@@ -182,11 +182,38 @@ var App = (function() {
     html += '</div>';
     html += '<div style="display:flex; gap:8px; margin-bottom:20px;">';
     html += '<button class="btn btn-blue btn-sm" style="flex:1;" onclick="Knowledge.openNoteEditor()">📝 写笔记</button>';
+    html += '<button class="btn btn-sm" style="flex:1;" onclick="App.openSyncModal()">🔄 数据同步</button>';
     html += '</div>';
 
+    html += renderHomeSyncCard();
     html += renderWeeklyProgress(records);
     html += renderPlantQuicklook();
 
+    return html;
+  }
+
+  function renderHomeSyncCard() {
+    var hasToken = Sync.hasToken();
+    var lastSync = Sync.formatLastSync();
+    var statusText = hasToken
+      ? (lastSync ? '已连接云端 · 上次同步 ' + lastSync : '已连接云端 · 还没有同步记录')
+      : '还没配置云端同步，换设备前最好先连上';
+    var hintText = hasToken
+      ? '手机上点一下就能把本机和云端合并更新。'
+      : '建议先在这里配置 Token，之后首页就能直接同步。';
+    var buttonText = hasToken ? '立即同步' : '设置同步';
+
+    var html = '';
+    html += '<div class="home-sync-card">';
+    html += '<div class="home-sync-head">';
+    html += '<div>';
+    html += '<div class="home-sync-title">同步中心</div>';
+    html += '<div class="home-sync-status">' + statusText + '</div>';
+    html += '</div>';
+    html += '<button class="btn btn-sm home-sync-action" onclick="App.openSyncModal()">' + buttonText + '</button>';
+    html += '</div>';
+    html += '<div class="home-sync-hint">' + hintText + '</div>';
+    html += '</div>';
     return html;
   }
 

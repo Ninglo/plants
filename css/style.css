@@ -803,6 +803,43 @@ body::before {
   gap: 8px;
 }
 
+/* ========== 首页同步卡片 ========== */
+.home-sync-card {
+  background: linear-gradient(180deg, rgba(232,241,255,0.86), rgba(255,254,249,0.9));
+  border: 1px solid rgba(140,164,208,0.24);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+.home-sync-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.home-sync-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gray-800);
+}
+.home-sync-status {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.home-sync-hint {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--gray-600);
+}
+.home-sync-action {
+  white-space: nowrap;
+  background: rgba(255,255,255,0.72);
+}
+
 /* ========== 首页植物速览 ========== */
 .quicklook-strip {
   display: grid;
