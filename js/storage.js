@@ -242,7 +242,14 @@ var Storage = (function() {
 
       var existing = getAll();
       var existingMap = {};
-      existing.forEach(function(r) { existingMap[r.id] = r; });
+      var existingNameMap = {};
+      existing.forEach(function(r) {
+        existingMap[r.id] = r;
+        // 按 type+name 建索引，用于去重（防止不同设备 seed 产生不同 id 的同名记录）
+        if (r.type === 'plant' && r.name) {
+          existingNameMap[r.name] = r;
+        }
+      });
 
       var added = 0;
       var updated = 0;
@@ -265,6 +272,10 @@ var Storage = (function() {
         }
 
         var local = existingMap[incoming.id];
+        // 按 id 没找到，但本地有同名植物记录（不同设备 seed 导致 id 不同），按同名合并
+        if (!local && incoming.type === 'plant' && incoming.name && existingNameMap[incoming.name]) {
+          local = existingNameMap[incoming.name];
+        }
         if (!local) {
           // 新记录从云端同步过来，进入待确认状态
           if (incoming.status === 'complete' && !incoming.confirmedAt) {
