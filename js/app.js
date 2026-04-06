@@ -163,12 +163,20 @@ var App = (function() {
     // 待补充（已观察未收录）
     html += renderObservedList();
 
-    // 快捷操作
+    // 快捷操作（统一水彩风方块）
     html += '<div class="home-actions">';
-    html += '<button class="home-action-btn" onclick="Form.openNew(\'plant\')"><span class="home-action-icon">🌿</span><span>记录</span></button>';
-    html += '<button class="home-action-btn" onclick="Inbox.openQuickPhoto()"><span class="home-action-icon">📷</span><span>速拍</span></button>';
-    html += '<button class="home-action-btn" onclick="Knowledge.openNoteEditor()"><span class="home-action-icon">📝</span><span>笔记</span></button>';
-    html += '<button class="home-action-btn" onclick="App.openReview()"><span class="home-action-icon">🧠</span><span>复习</span></button>';
+    html += '<button class="home-action-btn act-record" onclick="Form.openNew(\'plant\')">';
+    html += '<span class="home-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c-4-3-8-6-8-11a8 8 0 0116 0c0 5-4 8-8 11z"/><path d="M12 11V8"/><path d="M10 13h4"/></svg></span>';
+    html += '<span>记录植物</span></button>';
+    html += '<button class="home-action-btn act-snap" onclick="Inbox.openQuickPhoto()">';
+    html += '<span class="home-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></span>';
+    html += '<span>速拍</span></button>';
+    html += '<button class="home-action-btn act-note" onclick="Knowledge.openNoteEditor()">';
+    html += '<span class="home-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>';
+    html += '<span>写笔记</span></button>';
+    html += '<button class="home-action-btn act-review" onclick="App.openReview()">';
+    html += '<span class="home-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>';
+    html += '<span>去复习</span></button>';
     html += '</div>';
 
     html += renderWeeklyProgress(records);
