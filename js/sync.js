@@ -131,7 +131,7 @@ var Sync = (function() {
 
     onProgress && onProgress('正在准备本地数据...');
 
-    return Storage.getExportPayload().then(function(localJson) {
+    return Storage.getExportPayload(true).then(function(localJson) {
       var gistId = getGistId();
 
       // 没有 gist ID，尝试搜索或创建
@@ -180,8 +180,8 @@ var Sync = (function() {
             return { message: '云端数据已修复，本地数据已上传' };
           });
         }
-        // 重新导出合并后的本地数据
-        return Storage.getExportPayload().then(function(mergedJson) {
+        // 重新导出合并后的本地数据（含照片）
+        return Storage.getExportPayload(true).then(function(mergedJson) {
           onProgress && onProgress('正在上传合并后的数据...');
           return updateGist(gistId, mergedJson).then(function() {
             setLastSync();

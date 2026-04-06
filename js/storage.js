@@ -266,13 +266,28 @@ var Storage = (function() {
 
         var local = existingMap[incoming.id];
         if (!local) {
+          // 新记录从云端同步过来，进入待确认状态
+          if (incoming.status === 'complete' && !incoming.confirmedAt) {
+            incoming.status = 'ready';
+          }
           existing.push(incoming);
           added++;
         } else {
           if (new Date(incoming.updatedAt) > new Date(local.updatedAt)) {
+            // 合并时保护本地已有的照片：如果本地有照片而远端没有，保留本地的
+            var localPhotos = local.photoIds || [];
+            var incomingPhotos = incoming.photoIds || [];
             Object.assign(local, incoming);
+            if (incomingPhotos.length === 0 && localPhotos.length > 0) {
+              local.photoIds = localPhotos;
+            }
             updated++;
           } else {
+            // 本地更新，但如果远端带了照片而本地没有，补上照片
+            if (incoming.photoIds && incoming.photoIds.length > 0 &&
+                (!local.photoIds || local.photoIds.length === 0)) {
+              local.photoIds = incoming.photoIds;
+            }
             skipped++;
           }
         }
