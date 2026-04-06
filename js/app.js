@@ -361,6 +361,15 @@ var App = (function() {
     if (quizType === 'name' && (current.family || current.genus)) {
       extraHtml += '<div class="quiz-detail"><b>科属：</b>' + escapeHtml([current.family, current.genus].filter(Boolean).join(' · ')) + '</div>';
     }
+    if (current.quickID) {
+      extraHtml += '<div class="quiz-detail"><b>快速辨认：</b>' + escapeHtml(current.quickID) + '</div>';
+    }
+    if (current.confusionSpecies) {
+      extraHtml += '<div class="quiz-detail"><b>易混淆种：</b>' + escapeHtml(current.confusionSpecies) + '</div>';
+    }
+    if (current.funFact) {
+      extraHtml += '<div class="quiz-detail quiz-funfact"><b>冷知识：</b>' + escapeHtml(current.funFact) + '</div>';
+    }
     extraHtml += '<button class="btn btn-primary btn-sm" style="margin-top:12px; width:100%;" onclick="App.nextQuiz(\'' + quizType + '\')">下一题</button>';
 
     var extraEl = document.getElementById('quiz-extra');
@@ -756,6 +765,9 @@ var App = (function() {
       html += renderField('其他补充', record.obsNote);
       html += renderField('学习笔记', record.notes);
       html += renderField('我的思考', record.thoughts);
+
+      // 百科信息（补充数据）
+      html += renderEncyclopediaSection(record);
     } else if (record.type === 'knowledge') {
       html += renderField('主题', record.title);
       html += renderField('知识分类', record.category);
@@ -1190,6 +1202,64 @@ var App = (function() {
 
   // formatDate、escapeHtml、escapeAttr 已提取到 utils.js
   var formatDate = formatDateSimple;
+
+  function renderEncyclopediaSection(record) {
+    var groups = [
+      { title: '分布与生境', fields: [
+        { key: 'nativeRange', label: '原产地' },
+        { key: 'distribution', label: '分布' },
+        { key: 'habitat', label: '生境' }
+      ]},
+      { title: '物候信息', fields: [
+        { key: 'floweringSeason', label: '花期' },
+        { key: 'fruitingSeason', label: '果期' },
+        { key: 'evergreen', label: '常绿/落叶' }
+      ]},
+      { title: '实用价值', fields: [
+        { key: 'gardenUse', label: '园林用途' },
+        { key: 'medicinalEdible', label: '药用/食用' },
+        { key: 'ecologicalValue', label: '生态价值' }
+      ]},
+      { title: '识别要点', fields: [
+        { key: 'quickID', label: '快速辨认' },
+        { key: 'confusionSpecies', label: '易混淆种' }
+      ]},
+      { title: '文化趣味', fields: [
+        { key: 'nameOrigin', label: '名称由来' },
+        { key: 'culturalNote', label: '文化背景' },
+        { key: 'funFact', label: '趣味冷知识' }
+      ]}
+    ];
+
+    var hasAny = false;
+    groups.forEach(function(g) {
+      g.fields.forEach(function(f) {
+        if (record[f.key]) hasAny = true;
+      });
+    });
+    if (!hasAny) return '';
+
+    var html = '<div class="ency-section">';
+    html += '<div class="ency-title">植物百科</div>';
+
+    groups.forEach(function(g) {
+      var items = '';
+      g.fields.forEach(function(f) {
+        if (record[f.key]) {
+          items += '<div class="ency-item"><span class="ency-label">' + escapeHtml(f.label) + '</span><span class="ency-value">' + escapeHtml(record[f.key]) + '</span></div>';
+        }
+      });
+      if (items) {
+        html += '<div class="ency-group">';
+        html += '<div class="ency-group-title">' + escapeHtml(g.title) + '</div>';
+        html += items;
+        html += '</div>';
+      }
+    });
+
+    html += '</div>';
+    return html;
+  }
 
   function summarizeRecord(record) {
     var text = record.detailedObservation || record.notes || record.content || record.observation || record.attraction || '';

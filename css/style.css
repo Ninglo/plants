@@ -1124,6 +1124,12 @@ body::before {
 .quiz-detail {
   font-size: 13px;
   line-height: 1.6;
+}
+.quiz-funfact {
+  background: var(--green-light);
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-top: 4px;
   color: var(--gray-600);
   margin-bottom: 4px;
 }
@@ -1140,6 +1146,55 @@ body::before {
 .quiz-complete-score {
   font-size: 15px;
   color: var(--gray-600);
+}
+
+/* ========== 百科信息 ========== */
+.ency-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--gray-200);
+}
+.ency-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--green-dark);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ency-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background: var(--green);
+  border-radius: 2px;
+}
+.ency-group {
+  margin-bottom: 14px;
+}
+.ency-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-600);
+  margin-bottom: 6px;
+  padding-left: 2px;
+}
+.ency-item {
+  display: flex;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.ency-label {
+  flex-shrink: 0;
+  color: var(--gray-500);
+  min-width: 64px;
+}
+.ency-value {
+  color: var(--gray-800);
 }
 
 /* ========== 首页大图卡片 ========== */
