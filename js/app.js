@@ -409,11 +409,12 @@ var App = (function() {
   function seedPlants() {
     var records = Storage.getAll();
     var names = records.map(function(r) { return r.name; });
+    var SEED_NAMES = ['山桂花', '木香花'];
 
     var seeds = [
       {
         type: 'plant',
-        status: 'complete',
+        status: 'ready',
         name: '山桂花',
         latinName: '',
         family: '木犀科',
@@ -424,7 +425,7 @@ var App = (function() {
       },
       {
         type: 'plant',
-        status: 'complete',
+        status: 'ready',
         name: '木香花',
         latinName: 'Rosa banksiae',
         family: '蔷薇科',
@@ -442,6 +443,18 @@ var App = (function() {
         seeded = true;
       }
     });
+
+    // v63修复：之前seed时误设为complete，改回ready让用户走确认流程
+    if (!localStorage.getItem('plants_seed_fix_v63')) {
+      records.forEach(function(r) {
+        if (SEED_NAMES.indexOf(r.name) !== -1 && r.status === 'complete' && !r.confirmedAt) {
+          Storage.update(r.id, { status: 'ready' });
+          seeded = true;
+        }
+      });
+      localStorage.setItem('plants_seed_fix_v63', '1');
+    }
+
     return seeded;
   }
 
@@ -878,7 +891,7 @@ var App = (function() {
   }
 
   function confirmReady(id) {
-    var record = Storage.update(id, { status: 'complete' });
+    var record = Storage.update(id, { status: 'complete', confirmedAt: new Date().toISOString() });
     if (record) {
       closeModal();
       refreshView();
