@@ -3,24 +3,6 @@ var App = (function() {
   var currentView = 'home';
   var viewportBound = false;
   var keyboardOpen = false;
-  var HOME_QUICKLOOKS = [
-    {
-      name: '山桂花',
-      latin: '木犀属方向',
-      accent: 'gold',
-      summary: '先按桂花系看，不急着抢到具体种。',
-      cues: ['叶腋簇生', '小黄花更像4裂', '单叶革质'],
-      confusion: '别被“5瓣”口述带偏。若是芒果，常见是枝顶大型圆锥花序。'
-    },
-    {
-      name: '木香花',
-      latin: 'Rosa banksiae 组',
-      accent: 'green',
-      summary: '先按蔷薇属攀援灌木收，不先抢具体园艺型。',
-      cues: ['披垂蔓生', '复叶常见3-5小叶', '春季密开白色重瓣小花'],
-      confusion: '别只看“白花瀑布”就叫绣线菊。先看它是不是攀援、叶是不是复叶。'
-    }
-  ];
 
   function init() {
     bindViewportMetrics();
@@ -38,8 +20,13 @@ var App = (function() {
       Inbox.quickShoot();
     });
 
-    // 同步按钮
+    // 同步按钮 → 直接同步
     document.getElementById('btn-sync').addEventListener('click', function() {
+      directSync();
+    });
+
+    // 设置按钮
+    document.getElementById('btn-settings').addEventListener('click', function() {
       openSyncModal();
     });
 
@@ -49,8 +36,9 @@ var App = (function() {
       if (e.target === this) closeModal();
     });
 
-    // 迁移旧版照片数据，完成后渲染首页
+    // 迁移旧版照片数据，种子植物，完成后渲染首页
     Storage.migratePhotos().then(function() {
+      seedPlants();
       renderView('home');
     });
   }
@@ -175,80 +163,269 @@ var App = (function() {
     // 待补充（已观察未收录）
     html += renderObservedList();
 
-    // 快速新建
-    html += '<div style="display:flex; gap:8px; margin-bottom:8px;">';
-    html += '<button class="btn btn-primary btn-sm" style="flex:1;" onclick="Form.openNew(\'plant\')">🌿 正式记录</button>';
-    html += '<button class="btn btn-orange btn-sm" style="flex:1;" onclick="Inbox.openQuickPhoto()">📷 速记速拍</button>';
-    html += '</div>';
-    html += '<div style="display:flex; gap:8px; margin-bottom:20px;">';
-    html += '<button class="btn btn-blue btn-sm" style="flex:1;" onclick="Knowledge.openNoteEditor()">📝 写笔记</button>';
-    html += '<button class="btn btn-sm" style="flex:1;" onclick="App.openSyncModal()">🔄 数据同步</button>';
+    // 快捷操作
+    html += '<div class="home-actions">';
+    html += '<button class="home-action-btn" onclick="Form.openNew(\'plant\')"><span class="home-action-icon">🌿</span><span>记录</span></button>';
+    html += '<button class="home-action-btn" onclick="Inbox.openQuickPhoto()"><span class="home-action-icon">📷</span><span>速拍</span></button>';
+    html += '<button class="home-action-btn" onclick="Knowledge.openNoteEditor()"><span class="home-action-icon">📝</span><span>笔记</span></button>';
+    html += '<button class="home-action-btn" onclick="App.openReview()"><span class="home-action-icon">🧠</span><span>复习</span></button>';
     html += '</div>';
 
-    html += renderHomeSyncCard();
     html += renderWeeklyProgress(records);
-    html += renderPlantQuicklook();
+    html += renderReviewPreview();
 
     return html;
   }
 
-  function renderHomeSyncCard() {
-    var hasToken = Sync.hasToken();
-    var lastSync = Sync.formatLastSync();
-    var statusText = hasToken
-      ? (lastSync ? '已连接云端 · 上次同步 ' + lastSync : '已连接云端 · 还没有同步记录')
-      : '还没配置云端同步，换设备前最好先连上';
-    var hintText = hasToken
-      ? '手机上点一下就能把本机和云端合并更新。'
-      : '建议先在这里配置 Token，之后首页就能直接同步。';
-    var buttonText = hasToken ? '立即同步' : '设置同步';
+  // 首页复习预览（展示最近几个植物缩略图）
+  function renderReviewPreview() {
+    var plants = Storage.getByType('plant').filter(function(r) { return r.status !== 'pending' && r.name; });
+    if (plants.length === 0) return '';
 
+    // 取最多6个有名字的植物预览
+    var preview = plants.slice(0, 6);
     var html = '';
-    html += '<div class="home-sync-card">';
-    html += '<div class="home-sync-head">';
-    html += '<div>';
-    html += '<div class="home-sync-title">同步中心</div>';
-    html += '<div class="home-sync-status">' + statusText + '</div>';
-    html += '</div>';
-    html += '<button class="btn btn-sm home-sync-action" onclick="App.openSyncModal()">' + buttonText + '</button>';
-    html += '</div>';
-    html += '<div class="home-sync-hint">' + hintText + '</div>';
-    html += '</div>';
-    return html;
-  }
-
-  function renderPlantQuicklook() {
-    var html = '';
-
     html += '<div class="section-title">';
-    html += '<span>植物速览</span>';
-    html += '<span class="count">最近复习</span>';
+    html += '<span>植物复习</span>';
+    html += '<span class="count" style="cursor:pointer;" onclick="App.openReview()">' + plants.length + ' 种 →</span>';
     html += '</div>';
-    html += '<div class="quicklook-strip">';
-
-    HOME_QUICKLOOKS.forEach(function(item) {
-      html += '<div class="quicklook-card ' + item.accent + '">';
-      html += '<div class="quicklook-card-head">';
-      html += '<div>';
-      html += '<div class="quicklook-name">' + item.name + '</div>';
-      html += '<div class="quicklook-latin">' + item.latin + '</div>';
-      html += '</div>';
-      html += '<div class="quicklook-badge">复习卡</div>';
-      html += '</div>';
-      html += '<div class="quicklook-summary">' + item.summary + '</div>';
-      html += '<div class="quicklook-label">抓手</div>';
-      html += '<div class="quicklook-tags">';
-      item.cues.forEach(function(cue) {
-        html += '<span class="quicklook-tag">' + cue + '</span>';
-      });
-      html += '</div>';
-      html += '<div class="quicklook-label">最易混点</div>';
-      html += '<div class="quicklook-confusion">' + item.confusion + '</div>';
+    html += '<div class="review-preview-grid">';
+    preview.forEach(function(p) {
+      html += '<div class="review-preview-item" onclick="App.openReview()">';
+      if (p.photoIds && p.photoIds[0]) {
+        html += '<img class="review-preview-img" data-photo-id="' + p.photoIds[0] + '" src="' + Storage.BLANK_IMG + '">';
+      } else {
+        html += '<div class="review-preview-img review-preview-placeholder">🌿</div>';
+      }
+      html += '<div class="review-preview-name">' + escapeHtml(p.name) + '</div>';
       html += '</div>';
     });
-
     html += '</div>';
     return html;
+  }
+
+  // ===== 复习功能 =====
+  function openReview() {
+    var plants = Storage.getByType('plant').filter(function(r) { return r.status !== 'pending' && r.name; });
+    if (plants.length === 0) {
+      showSyncToast('还没有植物记录，先去记录几棵吧', 'info');
+      setTimeout(function() {
+        var t = document.getElementById('sync-toast');
+        if (t) { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 300); }
+      }, 2000);
+      return;
+    }
+    renderReviewModal(plants, 'browse');
+  }
+
+  function renderReviewModal(plants, mode) {
+    var html = '';
+
+    // 模式切换
+    html += '<div class="review-mode-tabs">';
+    html += '<button class="review-tab' + (mode === 'browse' ? ' active' : '') + '" onclick="App.switchReviewMode(\'browse\')">浏览</button>';
+    html += '<button class="review-tab' + (mode === 'quiz-name' ? ' active' : '') + '" onclick="App.switchReviewMode(\'quiz-name\')">看图猜名</button>';
+    html += '<button class="review-tab' + (mode === 'quiz-family' ? ' active' : '') + '" onclick="App.switchReviewMode(\'quiz-family\')">看图猜科属</button>';
+    html += '</div>';
+
+    if (mode === 'browse') {
+      html += renderBrowseMode(plants);
+    } else if (mode === 'quiz-name') {
+      html += renderQuizMode(plants, 'name');
+    } else if (mode === 'quiz-family') {
+      html += renderQuizMode(plants, 'family');
+    }
+
+    document.getElementById('modal-body').innerHTML = html;
+    openModal('植物复习');
+    Storage.loadPhotosInDom(document.getElementById('modal-body'));
+  }
+
+  var _reviewPlants = [];
+
+  function switchReviewMode(mode) {
+    var plants = _reviewPlants.length > 0 ? _reviewPlants : Storage.getByType('plant').filter(function(r) { return r.status !== 'pending' && r.name; });
+    _reviewPlants = plants;
+    renderReviewModal(plants, mode);
+  }
+
+  function renderBrowseMode(plants) {
+    _reviewPlants = plants;
+    var html = '<div class="review-browse-grid">';
+    plants.forEach(function(p) {
+      html += '<div class="review-browse-card" onclick="App.showDetail(\'' + p.id + '\')">';
+      if (p.photoIds && p.photoIds[0]) {
+        html += '<img class="review-browse-img" data-photo-id="' + p.photoIds[0] + '" src="' + Storage.BLANK_IMG + '">';
+      } else {
+        html += '<div class="review-browse-img review-browse-placeholder">🌿</div>';
+      }
+      html += '<div class="review-browse-info">';
+      html += '<div class="review-browse-name">' + escapeHtml(p.name) + '</div>';
+      if (p.family || p.genus) {
+        html += '<div class="review-browse-meta">' + escapeHtml([p.family, p.genus].filter(Boolean).join(' · ')) + '</div>';
+      }
+      if (p.features) {
+        html += '<div class="review-browse-features">' + escapeHtml(p.features.length > 40 ? p.features.slice(0, 40) + '…' : p.features) + '</div>';
+      }
+      html += '</div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  var _quizState = { index: 0, score: 0, total: 0, answered: false, shuffled: [] };
+
+  function renderQuizMode(plants, quizType) {
+    _reviewPlants = plants;
+    // 筛选有照片的植物
+    var withPhotos = plants.filter(function(p) { return p.photoIds && p.photoIds.length > 0; });
+    if (withPhotos.length < 2) {
+      return '<div class="review-empty">需要至少2种有照片的植物才能练习</div>';
+    }
+
+    // 首次进入或重新开始
+    if (_quizState.shuffled.length === 0 || _quizState.index >= _quizState.shuffled.length) {
+      _quizState = { index: 0, score: 0, total: 0, answered: false, shuffled: shuffleArray(withPhotos.slice()) };
+    }
+
+    var current = _quizState.shuffled[_quizState.index];
+    var questionLabel = quizType === 'name' ? '这是什么植物？' : '这棵植物属于哪个科/属？';
+    var correctAnswer = quizType === 'name' ? current.name : [current.family, current.genus].filter(Boolean).join(' · ');
+
+    // 生成选项（1个正确 + 3个干扰）
+    var options = [correctAnswer];
+    var others = withPhotos.filter(function(p) { return p.id !== current.id; });
+    others = shuffleArray(others);
+    for (var i = 0; i < Math.min(3, others.length); i++) {
+      var opt = quizType === 'name' ? others[i].name : [others[i].family, others[i].genus].filter(Boolean).join(' · ');
+      if (opt && options.indexOf(opt) === -1) options.push(opt);
+    }
+    options = shuffleArray(options);
+
+    var html = '';
+    html += '<div class="quiz-progress">' + (_quizState.index + 1) + ' / ' + _quizState.shuffled.length;
+    if (_quizState.total > 0) html += '　正确 ' + _quizState.score + '/' + _quizState.total;
+    html += '</div>';
+
+    html += '<div class="quiz-photo-wrap">';
+    html += '<img class="quiz-photo" data-photo-id="' + current.photoIds[0] + '" src="' + Storage.BLANK_IMG + '">';
+    html += '</div>';
+
+    html += '<div class="quiz-question">' + questionLabel + '</div>';
+    html += '<div class="quiz-options" id="quiz-options">';
+    options.forEach(function(opt) {
+      html += '<button class="quiz-option" data-answer="' + escapeAttr(opt) + '" data-correct="' + escapeAttr(correctAnswer) + '" data-type="' + quizType + '" onclick="App.answerQuiz(this)">' + escapeHtml(opt) + '</button>';
+    });
+    html += '</div>';
+    html += '<div class="quiz-extra" id="quiz-extra"></div>';
+
+    return html;
+  }
+
+  function answerQuiz(btn) {
+    if (_quizState.answered) return;
+    _quizState.answered = true;
+    _quizState.total++;
+
+    var answer = btn.getAttribute('data-answer');
+    var correct = btn.getAttribute('data-correct');
+    var quizType = btn.getAttribute('data-type');
+    var isCorrect = answer === correct;
+    if (isCorrect) _quizState.score++;
+
+    // 高亮结果
+    var options = document.querySelectorAll('#quiz-options .quiz-option');
+    options.forEach(function(o) {
+      o.disabled = true;
+      if (o.getAttribute('data-answer') === correct) {
+        o.classList.add('quiz-correct');
+      } else if (o === btn && !isCorrect) {
+        o.classList.add('quiz-wrong');
+      }
+    });
+
+    // 展示额外信息
+    var current = _quizState.shuffled[_quizState.index];
+    var extraHtml = '<div class="quiz-result ' + (isCorrect ? 'correct' : 'wrong') + '">' + (isCorrect ? '答对了！' : '答错了') + '</div>';
+    if (current.features) {
+      extraHtml += '<div class="quiz-detail"><b>特征：</b>' + escapeHtml(current.features) + '</div>';
+    }
+    if (quizType === 'name' && (current.family || current.genus)) {
+      extraHtml += '<div class="quiz-detail"><b>科属：</b>' + escapeHtml([current.family, current.genus].filter(Boolean).join(' · ')) + '</div>';
+    }
+    extraHtml += '<button class="btn btn-primary btn-sm" style="margin-top:12px; width:100%;" onclick="App.nextQuiz(\'' + quizType + '\')">下一题</button>';
+
+    var extraEl = document.getElementById('quiz-extra');
+    if (extraEl) extraEl.innerHTML = extraHtml;
+  }
+
+  function nextQuiz(quizType) {
+    _quizState.index++;
+    _quizState.answered = false;
+    if (_quizState.index >= _quizState.shuffled.length) {
+      // 完成一轮
+      var html = '<div class="quiz-complete">';
+      html += '<div class="quiz-complete-title">复习完成！</div>';
+      html += '<div class="quiz-complete-score">正确率 ' + Math.round(_quizState.score / _quizState.total * 100) + '%（' + _quizState.score + '/' + _quizState.total + '）</div>';
+      html += '<button class="btn btn-primary btn-block" style="margin-top:16px;" onclick="App.resetQuiz(\'' + quizType + '\')">再来一轮</button>';
+      html += '</div>';
+      document.getElementById('modal-body').innerHTML = html;
+      return;
+    }
+    renderReviewModal(_reviewPlants, 'quiz-' + quizType);
+  }
+
+  function resetQuiz(quizType) {
+    _quizState = { index: 0, score: 0, total: 0, answered: false, shuffled: [] };
+    renderReviewModal(_reviewPlants, 'quiz-' + quizType);
+  }
+
+  function shuffleArray(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var temp = arr[i]; arr[i] = arr[j]; arr[j] = temp;
+    }
+    return arr;
+  }
+
+  // 种子植物数据（一次性迁移）
+  function seedPlants() {
+    var records = Storage.getAll();
+    var names = records.map(function(r) { return r.name; });
+
+    var seeds = [
+      {
+        type: 'plant',
+        status: 'complete',
+        name: '山桂花',
+        latinName: '',
+        family: '木犀科',
+        genus: '木犀属',
+        features: '叶腋簇生小黄花，花被4裂，单叶革质，有香气',
+        notes: '先按桂花系看，不急着到具体种。别被"5瓣"口述带偏，若是芒果则常见枝顶大型圆锥花序。',
+        tags: ['木犀科', '芳香']
+      },
+      {
+        type: 'plant',
+        status: 'complete',
+        name: '木香花',
+        latinName: 'Rosa banksiae',
+        family: '蔷薇科',
+        genus: '蔷薇属',
+        features: '披垂蔓生攀援灌木，复叶常见3-5小叶，春季密开白色重瓣小花',
+        notes: '先按蔷薇属攀援灌木收，不先抢具体园艺型。别只看"白花瀑布"就叫绣线菊，先看它是不是攀援、叶是不是复叶。',
+        tags: ['蔷薇科', '攀援']
+      }
+    ];
+
+    var seeded = false;
+    seeds.forEach(function(seed) {
+      if (names.indexOf(seed.name) === -1) {
+        Storage.create(seed);
+        seeded = true;
+      }
+    });
+    return seeded;
   }
 
   function renderWeeklyProgress(records) {
@@ -727,7 +904,46 @@ var App = (function() {
     return localStorage.getItem('plants_gemini_key') || '';
   }
 
-  // 同步模态
+  // 直接同步（不打开弹窗）
+  function directSync() {
+    if (!Sync.hasToken()) {
+      openSyncModal();
+      return;
+    }
+    var btn = document.getElementById('btn-sync');
+    if (btn) btn.classList.add('syncing');
+    showSyncToast('正在同步...', 'info');
+
+    Sync.doSync(function(msg) {
+      showSyncToast(msg, 'info');
+    }).then(function(result) {
+      if (btn) btn.classList.remove('syncing');
+      showSyncToast(result.message || '同步完成', 'success');
+      refreshView();
+    }).catch(function(err) {
+      if (btn) btn.classList.remove('syncing');
+      showSyncToast(err.message || '同步失败', 'error');
+    });
+  }
+
+  function showSyncToast(msg, type) {
+    var existing = document.getElementById('sync-toast');
+    if (existing) existing.remove();
+    var toast = document.createElement('div');
+    toast.id = 'sync-toast';
+    toast.className = 'sync-toast sync-toast-' + (type || 'info');
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    requestAnimationFrame(function() { toast.classList.add('show'); });
+    if (type !== 'info') {
+      setTimeout(function() {
+        toast.classList.remove('show');
+        setTimeout(function() { toast.remove(); }, 300);
+      }, 2500);
+    }
+  }
+
+  // 同步模态（设置页面）
   function openSyncModal() {
     var html = '';
 
@@ -996,6 +1212,12 @@ var App = (function() {
     saveAIConfig: saveAIConfig,
     clearAIKey: clearAIKey,
     saveGeminiKey: saveGeminiKey,
-    clearGeminiKey: clearGeminiKey
+    clearGeminiKey: clearGeminiKey,
+    directSync: directSync,
+    openReview: openReview,
+    switchReviewMode: switchReviewMode,
+    answerQuiz: answerQuiz,
+    nextQuiz: nextQuiz,
+    resetQuiz: resetQuiz
   };
 })();
